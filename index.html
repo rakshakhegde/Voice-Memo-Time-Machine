@@ -662,7 +662,7 @@
         c.width = Math.round(parentWidth * dpr);
         c.height = Math.round(120 * dpr);
         card.appendChild(c);
-        drawWaveformOnCanvas(intSamples, c);
+        drawSnippetWaveform(intSamples, c);
 
         // audio controls + download
         const controls = document.createElement('div');
@@ -718,12 +718,12 @@
       }
 
       // show playback progress overlay on snippet waveform
-      function playersetSeekUI(audio, canvasEl, samplesFloat) {
+      function playersetSeekUI(audio, canvasEl, intSamples) {
         const ctx = canvasEl.getContext('2d');
         const w = canvasEl.width;
         const h = canvasEl.height;
         function drawProgress() {
-          drawWaveformOnCanvas(samplesFloat, canvasEl);
+          drawSnippetWaveform(intSamples, canvasEl);
           const pct = audio.duration ? (audio.currentTime / audio.duration) : 0;
           ctx.fillStyle = 'rgba(100,255,200,0.08)';
           ctx.fillRect(0, 0, Math.max(2, pct * w), h);
@@ -741,7 +741,7 @@
       }
 
       // waveform drawing for canvas (handles HiDPI canvas sizes)
-      function drawWaveformOnCanvas(intSamples, canvasEl) {
+      function drawSnippetWaveform(intSamples, canvasEl) {
         const ctx = canvasEl.getContext('2d');
         const w = canvasEl.width;
         const h = canvasEl.height;
