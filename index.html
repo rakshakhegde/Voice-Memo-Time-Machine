@@ -734,8 +734,9 @@
         canvasEl.addEventListener('click', (ev) => {
           const rect = canvasEl.getBoundingClientRect();
           const x = ev.clientX - rect.left;
-          const pct = x / rect.width;
-          if (audio.duration) audio.currentTime = pct * audio.duration;
+          let percent = x / rect.width;
+          if (percent <= 0.05) percent = 0;
+          if (audio.duration) audio.currentTime = percent * audio.duration;
           drawProgress();
         });
       }
