@@ -326,6 +326,9 @@
       let allPlayers = [];
       let reuseBuffer = null;
 
+      let lastUsedMicLabel = localStorage.getItem('lastUsedMicLabel') || 'MacBook Pro Microphone';
+      let lastUsedDeviceId = localStorage.getItem('lastUsedDeviceId');
+
       // Start initialization
       await initAndStart();
 
@@ -391,17 +394,31 @@
       async function getDevicesAndPopulate() {
         try {
           if (!micStream) {
-            await navigator.mediaDevices.getUserMedia({ audio: true });
+            // Use saved deviceId if available
+            const constraints = {
+              audio: lastUsedDeviceId ? 
+                { deviceId: { exact: lastUsedDeviceId } } : 
+                true
+            };
+            await navigator.mediaDevices.getUserMedia(constraints);
           }
         } catch (e) {
           // ignore — user may have blocked; still try to enumerate
         }
+        
         const devices = await navigator.mediaDevices.enumerateDevices();
         deviceList = devices.filter(d => d.kind === 'audioinput');
+        
+        // Find default index based on saved label or deviceId
         let defaultIndex = 0;
         for (let i = 0; i < deviceList.length; i++) {
-          if (deviceList[i].label === 'MacBook Pro Microphone') { defaultIndex = i; break; }
+          const device = deviceList[i];
+          if (device.deviceId === lastUsedDeviceId || device.label === lastUsedMicLabel) {
+            defaultIndex = i;
+            break;
+          }
         }
+
         deviceSelect.innerHTML = '';
         deviceList.forEach((d, i) => {
           const opt = document.createElement('option');
@@ -409,17 +426,30 @@
           opt.textContent = d.label || ('Microphone ' + (i + 1));
           deviceSelect.appendChild(opt);
         });
+
         if (deviceList.length === 0) {
           deviceSelect.innerHTML = '<option value="">(no input devices found)</option>';
           deviceLabel.textContent = 'Microphone: (none)';
           return;
         }
+
         let chosenDeviceId = deviceList[defaultIndex].deviceId;
         if (deviceId) chosenDeviceId = deviceId;
         deviceSelect.value = chosenDeviceId;
         deviceId = chosenDeviceId;
+        
         const selDevice = deviceList.find(d => d.deviceId === deviceId);
-        deviceLabel.textContent = 'Microphone: ' + (selDevice && selDevice.label ? selDevice.label : 'Selected input');
+        if (selDevice) {
+          // Save the selected device info
+          lastUsedMicLabel = selDevice.label;
+          lastUsedDeviceId = selDevice.deviceId;
+          localStorage.setItem('lastUsedMicLabel', lastUsedMicLabel);
+          localStorage.setItem('lastUsedDeviceId', lastUsedDeviceId);
+          
+          deviceLabel.textContent = 'Microphone: ' + selDevice.label;
+        } else {
+          deviceLabel.textContent = 'Microphone: Selected input';
+        }
       }
 
       // ---------- AudioWorklet recording ----------
