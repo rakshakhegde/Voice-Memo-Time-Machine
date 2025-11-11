@@ -444,7 +444,6 @@
       let totalSamplesRecorded = 0;
       let recording = false;
       let channelCount = 1;
-      let currentVolume = 0;
       let selectedDeviceId = null;
       let deviceList = [];
       let lastClickedSnippet = null;
@@ -458,14 +457,37 @@
         class RecorderProcessor extends AudioWorkletProcessor {
           constructor() {
             super();
-            this.buffer = new Float32Array(128); // typical AudioWorklet block size
+            // Buffer to hold the converted Int16 data for posting back
+            this.int16Buffer = new Int16Array(128); 
           }
+          
           process(inputs) {
             const input = inputs[0];
             if (input && input.length > 0) {
-              const ch0 = input[0];
-              this.buffer.set(ch0);              // copy into pre-allocated buffer
-              this.port.postMessage(this.buffer); // no transfer
+              const ch0 = input[0]; // This is the input Float32Array (read-only reference)
+              
+              // Convert floats from the input channel (ch0) to int16
+              // Calculate RMS while converting
+              let sumOfSquares = 0;
+
+              for (let i = 0; i < ch0.length; i++) {
+                // Clamp the float value between -1 and 1
+                const s = Math.max(-1, Math.min(1, ch0[i]));
+                
+                // Convert to Int16
+                const int16 = (s < 0 ? s * 32768 : s * 32767) | 0;
+                
+                this.int16Buffer[i] = int16;
+
+                sumOfSquares += s * s;
+              }
+
+              const rms = Math.sqrt(sumOfSquares / ch0.length);
+
+              this.port.postMessage({
+                  intSamples: this.int16Buffer,
+                  rms: rms
+              });
             }
             return true;
           }
@@ -632,11 +654,9 @@
         recorderNode?.disconnect();
         recorderNode = new AudioWorkletNode(audioContext, "recorder-processor");
 
-        // receive Float32Array chunks from worklet
         recorderNode.port.onmessage = (event) => {
-          const floatSamples = event.data; // still owned by worklet
-          writeToCircularBuffer(floatSamples);
-          updateLevelMeter(floatSamples);
+          writeToCircularBuffer(event.data.intSamples);
+          updateLevelMeter(event.data.rms);
         };
         recorderNode.onprocessorerror = (err) => {
           logToDiv('❌ Recorder processor error:', err);
@@ -673,23 +693,16 @@
         recording = false;
       }
 
-      function writeToCircularBuffer(floatSamples) {
-        // floatSamples is a Float32Array
-        for (let i = 0; i < floatSamples.length; i++) {
-          const s = Math.max(-1, Math.min(1, floatSamples[i]));
-          const int16 = s < 0 ? s * 0x8000 : s * 0x7FFF;
-          buffer[writeIndex] = Math.round(int16);
+      function writeToCircularBuffer(intSamples) {
+        for (let i = 0; i < intSamples.length; i++) {
+          buffer[writeIndex] = intSamples[i];
           writeIndex++;
           totalSamplesRecorded++;
           if (writeIndex >= bufferLength) writeIndex = 0;
         }
       }
 
-      function updateLevelMeter(floatSamples) {
-        let sum = 0;
-        for (let i = 0; i < floatSamples.length; i++) sum += floatSamples[i] * floatSamples[i];
-        const rms = Math.sqrt(sum / floatSamples.length || 0);
-        currentVolume = rms;
+      function updateLevelMeter(rms) {
         levelBar.style.width = Math.min(1, rms * 4) * 100 + '%';
       }
 
