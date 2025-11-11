@@ -392,11 +392,11 @@
           //await ensureAudioContext();
           //await getDevicesAndPopulate();
           await startRecordingWithWorklet();
-          recStatus.textContent = 'Status: recording';
+          recStatus.textContent = 'Status: Recording';
           recording = true;
         } catch (err) {
           console.error('init error', err);
-          recStatus.textContent = 'Status: stopped';
+          recStatus.textContent = 'Status: ❌ Stopped';
           warnBox.style.display = 'block';
           warnBox.textContent = 'Microphone access required — click "Restart" and allow microphone. Some browsers prevent auto-start on load.';
         }
@@ -613,7 +613,7 @@
         sourceNode.connect(workletNode);
         // connect a gain of 0 to destination if some browsers require a connection to destination
         // but we avoid audible output by not connecting workletNode to destination.
-        recStatus.textContent = 'Status: recording';
+        recStatus.textContent = 'Status: Recording';
         recording = true;
       }
 
@@ -701,11 +701,6 @@
           await audioContext.resume();
         }
 
-        try { sourceNode?.disconnect(); } catch (e) {
-          console.error('sourceNode disconnect error', e);
-        }
-        sourceNode = audioContext.createMediaStreamSource(micStream);
-
         if (!audioContext.workletModuleLoaded) {
           await audioContext.audioWorklet.addModule(workletURL);
           audioContext.workletModuleLoaded = true;
@@ -723,12 +718,20 @@
           writeToCircularBuffer(floatSamples);
           updateLevelMeter(floatSamples);
         };
+        recorderNode.onprocessorerror = (err) => {
+          logToDiv('❌ Recorder processor error:', err);
+        };
+
         // Connect mic → worklet → destination (optional for monitoring)
+        try { sourceNode?.disconnect(); } catch (e) {
+          logToDiv('sourceNode disconnect error', e);
+        }
+        sourceNode = audioContext.createMediaStreamSource(micStream);
         sourceNode.connect(recorderNode);
         // recorderNode.connect(audioContext.destination); // uncomment to hear yourself
         // connect a gain of 0 to destination if some browsers require a connection to destination
         // but we avoid audible output by not connecting workletNode to destination.
-        recStatus.textContent = 'Status: recording';
+        recStatus.textContent = 'Status: Recording';
         recording = true;
 
         log("🎬 Recording started with:", chosenDevice.label);
@@ -746,7 +749,7 @@
           }
           sourceNode = null;
         }
-        recStatus.textContent = 'Status: stopped';
+        recStatus.textContent = 'Status: ❌ Stopped';
         recording = false;
       }
 
@@ -848,7 +851,7 @@
 
       async function createSnippet(seconds) {
         log('createSnippet');
-        recStatus.textContent = 'Status: creating snippet…';
+        recStatus.textContent = 'Status: Creating snippet…';
         await ensureAudioContext();
 
         // how many seconds have been recorded? buffer may not be fully filled yet
@@ -858,7 +861,7 @@
         const actualSeconds = Math.min(seconds, totalRecordedSec);
         if (actualSeconds <= 0) {
           alert('No audio available yet. Wait a few seconds and try again.');
-          recStatus.textContent = 'Status: recording';
+          recStatus.textContent = 'Status: Recording';
           return;
         }
 
@@ -974,7 +977,7 @@
 
         playersetSeekUI(audio, c, intSamples);
 
-        recStatus.textContent = 'Status: recording';
+        recStatus.textContent = 'Status: Recording';
       }
 
       // show playback progress overlay on snippet waveform
@@ -1145,11 +1148,12 @@
       });
 
       window.addEventListener('visibilitychange', () => {
+        const track = micStream?.getAudioTracks?.()[0];
         if (document.hidden) {
-          logToDiv('Went Background. AudioContext: ', audioContext?.state);
+          logToDiv('Background', audioContext?.state, track?.readyState);
         } else {
-          logToDiv('Came Foreground. AudioContext: ', audioContext?.state);
-          audioContext?.resume();
+          logToDiv('Came Foreground', audioContext?.state, track?.readyState);
+          //audioContext?.resume();
         }
       });
 
@@ -1158,7 +1162,7 @@
       }
 
       function logToDiv(...msg) {
-        log(...msg);
+        //log(...msg);
         const timestamp = new Date().toLocaleTimeString();
 const message = msg.map(m => (typeof m === 'string' ? m : JSON.stringify(m))).join(' ');
 
