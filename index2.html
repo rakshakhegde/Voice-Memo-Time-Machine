@@ -476,15 +476,6 @@
       await initAndStart();
       log('await initAndStart done');
 
-      // Add dummy logs (NEW)
-      function addDummyLogs() {
-        for(let i = 1; i <= 10; i++) {
-            logToDiv(`[Dummy Log ${i}] System check passed at ${new Date().toLocaleTimeString()}`);
-        }
-      }
-      addDummyLogs();
-      
-
       // UI wiring
       log('restart UI wiring');
       restartBtn.onclick = async () => { await restart(); };
@@ -1073,7 +1064,7 @@
         if (document.hidden) {
           logToDiv('Background', audioContext?.state, track?.readyState);
         } else {
-          logToDiv('Came Foreground', audioContext?.state, track?.readyState);
+          logToDiv('Foreground', audioContext?.state, track?.readyState);
           //audioContext?.resume();
         }
       });
