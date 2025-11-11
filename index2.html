@@ -194,7 +194,6 @@
 
     #liveClock {
       white-space: nowrap;
-      text-align: right;
       font-variant-numeric: tabular-nums;
     }
 
@@ -342,13 +341,12 @@
 
     <div class="right">
       <div class="panel">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div style="font-weight:700">Snippets</div>
-            <div class="muted small" style="margin-top:4px;">Choose a duration, or click any existing snippet to inspect
-            </div>
+        <div>
+          <div style="overflow: auto;">
+            <div id="liveClock" class="muted small" style="float:right; margin-top:2px;">—</div>
+            <div style="font-weight:700;">Snippets</div>
           </div>
-          <div id="liveClock" class="muted small">—</div>
+          <div class="muted small" style="margin-top:4px;">Choose a duration, or click any existing snippet to inspect</div>
         </div>
 
         <div id="no-snippet-msg" class="muted small" style="margin-top:8px;">No snippet selected yet. Click a duration to extract.</div>
