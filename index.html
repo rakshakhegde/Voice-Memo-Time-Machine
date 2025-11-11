@@ -273,7 +273,8 @@
   <div class="app">
     <div class="panel">
       <h1 style="cursor: pointer;" onclick="window.open('voice_memo_time_machine.jpg', '_blank')">
-        <img src="voice_memo_time_machine.ico" style="height: 1.2em; vertical-align: middle; margin-right: 8px;" alt="favicon of voice memo time machine">
+        <img src="voice_memo_time_machine.ico" style="height: 1.2em; vertical-align: middle; margin-right: 8px;"
+          alt="favicon of voice memo time machine">
         <span style="vertical-align: middle; cursor: pointer;">Rolling Hour Recorder</span>
       </h1>
       <div class="muted">Records continuously (rolling 1 hour). Extract snippets while recording.</div>
@@ -339,7 +340,7 @@
               <div id="logger"></div>
             </div>
           </div>
-          </div>
+        </div>
       </div>
       <footer>Built — Rolling recorder (client-only). No external servers.</footer>
     </div>
@@ -351,10 +352,12 @@
             <div id="liveClock" class="muted small" style="float:right; margin-top:2px;">—</div>
             <div style="font-weight:700;">Snippets</div>
           </div>
-          <div class="muted small" style="margin-top:4px;">Choose a duration, or click any existing snippet to inspect</div>
+          <div class="muted small" style="margin-top:4px;">Choose a duration, or click any existing snippet to inspect
+          </div>
         </div>
 
-        <div id="no-snippet-msg" class="muted small" style="margin-top:8px;">No snippet selected yet. Click a duration to extract.</div>
+        <div id="no-snippet-msg" class="muted small" style="margin-top:8px;">No snippet selected yet. Click a duration
+          to extract.</div>
         <div id="snippetsArea" style="margin-top:12px;display:flex;flex-direction:column;gap:12px">
         </div>
       </div>
@@ -397,7 +400,7 @@
       const restartBtn = document.getElementById('restartBtn');
       const liveClock = document.getElementById('liveClock');
       const warnBox = document.getElementById('warnBox');
-      
+
       // Logger UI references (UPDATED)
       const loggerContainer = document.getElementById('loggerContainer');
       const logTitleRow = loggerContainer.querySelector('.log-title-row');
@@ -411,22 +414,22 @@
 
       // Click to clear logs (UPDATED: now on clear button)
       clearLogBtn.addEventListener('click', (e) => {
-          e.stopPropagation(); // Prevent container collapse/expand
-          loggerDiv.innerHTML = '';
+        e.stopPropagation(); // Prevent container collapse/expand
+        loggerDiv.innerHTML = '';
       });
 
       // Collapse/Expand functionality
       logTitleRow.addEventListener('click', () => {
-          const isCollapsed = logContent.classList.contains('collapsed');
-          if (isCollapsed) {
-              logContent.classList.remove('collapsed');
-              logArrow.classList.remove('collapsed');
-          } else {
-              logContent.classList.add('collapsed');
-              logArrow.classList.add('collapsed');
-          }
+        const isCollapsed = logContent.classList.contains('collapsed');
+        if (isCollapsed) {
+          logContent.classList.remove('collapsed');
+          logArrow.classList.remove('collapsed');
+        } else {
+          logContent.classList.add('collapsed');
+          logArrow.classList.add('collapsed');
+        }
       });
-      
+
 
       // config
       const MAX_SECONDS = 3600; // 1 hour
@@ -716,7 +719,7 @@
         const availableSamples = Math.min(requiredSize, bufferLength);
         // reuse an Int16Array pool (store raw int16 PCM)
         if (!reuseBuffer || reuseBuffer.length !== availableSamples) {
-            reuseBuffer = new Int16Array(availableSamples);
+          reuseBuffer = new Int16Array(availableSamples);
         }
         const result = reuseBuffer;
         const total = availableSamples;
