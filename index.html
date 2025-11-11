@@ -1072,7 +1072,10 @@
       }
 
       // cleanup on page unload
-      window.addEventListener('unload', () => { if (micStream) micStream.getTracks().forEach(t => t.stop()); });
+      window.addEventListener('unload', () => {
+        logToDiv('Unloading page, stopping recording.');
+        if (micStream) micStream.getTracks().forEach(t => t.stop());
+      });
 
       // spacebar toggles play/pause for last clicked snippet
       window.addEventListener('keydown', ev => {
