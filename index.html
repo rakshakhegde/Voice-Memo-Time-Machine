@@ -256,7 +256,7 @@
           </div>
           <div style="height:8px"></div>
           <div id="memoryInfo" class="muted small">Est. buffer bytes: —</div>
-          <div id="logger" class="muted small">Logger</div>
+          <div id="logger" class="muted small" style="margin-top:8px;"></div>
         </div>
       </div>
       <footer>Built — Rolling recorder (client-only). No external servers.</footer>
@@ -320,10 +320,8 @@
       const noSnippetMsg = document.getElementById('no-snippet-msg');
 
 
-      // Click to clear
-      loggerDiv.addEventListener('click', () => {
-        loggerDiv.innerHTML = 'Logger'; // reset text
-      });
+      // Click to clear logs
+      loggerDiv.addEventListener('click', () => { loggerDiv.innerHTML = ''; });
 
       // config
       const MAX_SECONDS = 3600; // 1 hour
@@ -429,6 +427,9 @@
         if (n > 1e3) return (n / 1e3).toFixed(2) + ' KB';
         return n + ' bytes';
       }
+
+      // TODO
+      // modify logger to be a collapsible panel with a button to show/hide
 
       async function startRecordingWithWorklet() {
         log("🎙️ unified startRecordingWithWorklet");
@@ -974,6 +975,7 @@
       }
 
       function logToDiv(...msg) {
+        //return;
         //log(...msg);
         const timestamp = new Date().toLocaleTimeString();
         const message = msg.map(m => (typeof m === 'string' ? m : JSON.stringify(m))).join(' ');
