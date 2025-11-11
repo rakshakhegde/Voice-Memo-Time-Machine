@@ -694,6 +694,9 @@
           sampleRate = audioContext.sampleRate;
           srDisplay.textContent = 'Sample rate: ' + sampleRate + ' Hz';
           allocateCircularBuffer();
+          audioContext.onstatechange = () => {
+            logToDiv(`🎧 AudioContext state: ${audioContext.state}`);
+          };
         } else if (audioContext.state === 'suspended') {
           await audioContext.resume();
         }
@@ -1146,10 +1149,7 @@
           logToDiv('Went Background. AudioContext: ', audioContext?.state);
         } else {
           logToDiv('Came Foreground. AudioContext: ', audioContext?.state);
-          // resume audioContext if needed
-          /*if (audioContext && audioContext.state === 'suspended') {
-            audioContext.resume();
-          }*/
+          audioContext?.resume();
         }
       });
 
