@@ -438,12 +438,12 @@
       let buffer = null; // Int16Array circular buffer
       let bufferLength = 0;
       let writeIndex = 0;
+      let totalSamplesRecorded = 0;
       let recording = false;
       let channelCount = 1;
       let currentVolume = 0;
       let selectedDeviceId = null;
       let deviceList = [];
-      let memoryBytesEstimate = 0;
       let lastClickedSnippet = null;
       let reuseBuffer = null;
 
@@ -522,7 +522,8 @@
         bufferLength = sampleRate * MAX_SECONDS;
         buffer = new Int16Array(bufferLength);
         writeIndex = 0;
-        memoryBytesEstimate = bufferLength * 2;
+        totalSamplesRecorded = 0;
+        const memoryBytesEstimate = bufferLength * 2;
         memoryInfo.textContent = 'Est. buffer bytes: ' + formatBytes(memoryBytesEstimate) + ' (' + bufferLength + ' samples)';
       }
 
@@ -676,6 +677,7 @@
           const int16 = s < 0 ? s * 0x8000 : s * 0x7FFF;
           buffer[writeIndex] = Math.round(int16);
           writeIndex++;
+          totalSamplesRecorded++;
           if (writeIndex >= bufferLength) writeIndex = 0;
         }
       }
@@ -693,7 +695,6 @@
         log('extractLastNSeconds');
         if (!buffer) return new Int16Array(0);
 
-        log('extractLastNSeconds sampleRate', sampleRate);
         const samplesNeeded = Math.min(Math.floor(sampleRate * seconds), bufferLength);
         const result = new Int16Array(samplesNeeded);
         let start = writeIndex - samplesNeeded;
@@ -708,14 +709,17 @@
         return result;
       }
 
-      function extractLastNSecondsForLive(seconds) {
-        //log('extractLastNSecondsForLive');
+      function extractLastNSecondsForLive() {
+        log('extractLastNSecondsForLive');
         if (!buffer) return new Int16Array(0);
-        const samplesNeeded = Math.min(Math.floor(sampleRate * seconds), bufferLength);
+        const requiredSize = LIVE_SECONDS * sampleRate;
+        const availableSamples = Math.min(requiredSize, bufferLength);
         // reuse an Int16Array pool (store raw int16 PCM)
-        if (!reuseBuffer) reuseBuffer = new Int16Array(LIVE_SECONDS * sampleRate);
+        if (!reuseBuffer || reuseBuffer.length !== availableSamples) {
+            reuseBuffer = new Int16Array(availableSamples);
+        }
         const result = reuseBuffer;
-        const total = Math.min(samplesNeeded, result.length);
+        const total = availableSamples;
         let start = writeIndex - total;
         if (start < 0) start += bufferLength;
         if (start + total <= bufferLength) {
@@ -769,10 +773,7 @@
         log('createSnippet');
         recStatus.textContent = 'Status: Creating snippet…';
 
-        // how many seconds have been recorded? buffer may not be fully filled yet
-        // compute recorded samples: if writeIndex wrapped, bufferLength else writeIndex
-        const recordedSamples = Math.min(bufferLength, writeIndex || bufferLength);
-        const totalRecordedSec = recordedSamples / sampleRate;
+        const totalRecordedSec = totalSamplesRecorded / sampleRate;
         const actualSeconds = Math.min(seconds, totalRecordedSec);
         if (actualSeconds <= 0) {
           alert('No audio available yet. Wait a few seconds and try again.');
@@ -993,7 +994,7 @@
         ctx.beginPath();
 
         // extract returns Int16Array now (raw PCM). compute min/max in int domain then scale once.
-        const samples = extractLastNSecondsForLive(LIVE_SECONDS);
+        const samples = extractLastNSecondsForLive();
         if (samples.length > 0) {
           const step = Math.max(1, Math.floor(samples.length / wCss));
           for (let x = 0; x < wCss; x++) {
