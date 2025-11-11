@@ -630,6 +630,22 @@
           });
         }
 
+        if (micStream) {
+          const track = micStream.getAudioTracks()[0];
+          if (track) {
+            const settings = track.getSettings();
+            logToDiv("🎤 Mic stream settings:", settings);
+
+            track.onended = () => {
+              logToDiv("🔴 Track Ended.", {
+                id: track.id,
+                kind: track.kind
+              });
+              restart();
+            }
+          }
+        }
+
         // 8️⃣ Step 7: setup AudioContext and worklet
         if (!audioContext || audioContext.state === 'closed') {
           audioContext = new (window.AudioContext || window.webkitAudioContext)();
