@@ -277,6 +277,43 @@
       font-variant-numeric: tabular-nums;
       margin-left: 4px;
     }
+
+    #logContent {
+      /* This is crucial for positioning the 'Copied!' message absolutely inside it */
+      position: relative;
+
+      /* Add a smooth transition for the background color change */
+      transition: background-color 0.5s ease-in-out;
+    }
+
+    /* CSS for the dynamically created "Copied!" message */
+    #copy-feedback {
+      position: absolute;
+      top: 50%;
+      /* Start at 50% from the top */
+      left: 50%;
+      /* Start at 50% from the left */
+      transform: translate(-50%, -50%);
+      /* Shift back by half its width/height to perfectly center it */
+
+      /* Styling */
+      background-color: rgba(0, 0, 0, 0.75);
+      /* Dark, semi-transparent background */
+      color: white;
+      padding: 8px 15px;
+      border-radius: 5px;
+      font-size: 0.8em;
+      opacity: 0;
+      pointer-events: none;
+      /* Allows clicks to pass through to the element beneath */
+
+      /* Fade out transition */
+      transition: opacity 0.5s ease-in-out;
+    }
+
+    #copy-feedback.show {
+      opacity: 1;
+    }
   </style>
 </head>
 
@@ -355,6 +392,7 @@
             </div>
             <div id="logContent" class="log-content collapsed">
               <div id="logger"></div>
+              <div id="copy-feedback">Copied!</div>
             </div>
           </div>
         </div>
@@ -428,6 +466,7 @@
       const loggerDiv = document.getElementById('logger');
       const clearLogBtn = document.getElementById('clearLogBtn');
       const logArrow = document.getElementById('logArrow');
+      const copyFeedback = document.getElementById('copy-feedback');
 
       const noSnippetMsg = document.getElementById('no-snippet-msg');
 
@@ -553,6 +592,7 @@
           liveClock.textContent = new Date().toLocaleString();
           uptimeClock.textContent = formatUptime(totalSamplesRecorded / sampleRate);
         }, 1000);
+        setupLogger();
       }
 
       async function restart() {
@@ -1144,6 +1184,27 @@
         return `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
       }
 
+      function setupLogger() {
+        loggerDiv.addEventListener('click', () => {
+          const textToCopy = loggerDiv.textContent || loggerDiv.innerText;
+
+          // Use the modern Clipboard API
+          navigator.clipboard.writeText(textToCopy)
+            .then(() => {
+              copyFeedback.classList.add('show');
+
+              setTimeout(() => {
+                copyFeedback.classList.remove('show');
+                log('Logs successfully copied to clipboard!');
+              }, 500);
+              
+            })
+            .catch(err => {
+              logToDiv('Failed to copy logs: ', err);
+            });
+        });
+      }
+
       // cleanup on page unload
       window.addEventListener('unload', () => {
         logToDiv('Unloading page, stopping recording.');
@@ -1185,16 +1246,25 @@
         console.log(...msg);
       }
 
+      /**
+       * Logs a message to the loggerDiv as formatted text with line breaks.
+       *
+       * @param {...any} msg - The messages to be logged.
+       */
       function logToDiv(...msg) {
         log(...msg);
+
+        // 1. Format the log message
         const timestamp = new Date().toLocaleTimeString();
         const message = msg.map(m => (typeof m === 'string' ? m : JSON.stringify(m))).join(' ');
 
-        const line = document.createElement('div');
-        line.textContent = `[${timestamp}] ${message}`;
-        loggerDiv.appendChild(line);
+        const newLineContent = `[${timestamp}] ${message}`;
 
-        // Auto-scroll to bottom
+        // 2. Append the new content as text followed by a line break (<br>)
+        // Using innerHTML allows the <br> tag to be interpreted.
+        loggerDiv.innerHTML += newLineContent + '<br>\n';
+
+        // 3. Auto-scroll to bottom
         logContent.scrollTop = logContent.scrollHeight;
       }
 
