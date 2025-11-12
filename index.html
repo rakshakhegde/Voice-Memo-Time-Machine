@@ -893,7 +893,8 @@
 
         const titleDiv = document.createElement('div');
         titleDiv.style.fontWeight = '700';
-        titleDiv.textContent = `${formatSeconds(actualSeconds)} snippet`;
+        const snippetDuration = intSamples.length / sampleRate;
+        titleDiv.textContent = `${formatSeconds(snippetDuration)} snippet`;
         header.appendChild(titleDiv);
 
         const dateDiv = document.createElement('div');
