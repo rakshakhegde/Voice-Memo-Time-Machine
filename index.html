@@ -266,6 +266,17 @@
       display: flex;
       align-items: center;
     }
+
+    #uptimeDiv {
+      display: flex;
+      align-items: center;
+      flex-wrap: nowrap;
+    }
+
+    #uptimeClock {
+      font-variant-numeric: tabular-nums;
+      margin-left: 4px;
+    }
   </style>
 </head>
 
@@ -300,8 +311,14 @@
         </div>
 
         <div>
-          <div class="muted small">Live waveform (past 30s)</div>
-          <canvas id="liveWave" width="800" height="120"></canvas>
+          <div>
+            <div id="uptimeDiv" class="muted small" style="float:right;">
+              <div>Uptime: </div>
+              <div id="uptimeClock">00:00</div>
+            </div>
+            <div class="muted small">Live waveform (past 30s)</div>
+          </div>
+          <canvas id="liveWave" width="800" height="120" style="margin-top:4px;"></canvas>
           <div style="height:8px"></div>
           <div class="meter">
             <div id="level" class="level"></div>
@@ -402,6 +419,7 @@
       const restartBtn = document.getElementById('restartBtn');
       const liveClock = document.getElementById('liveClock');
       const warnBox = document.getElementById('warnBox');
+      const uptimeClock = document.getElementById('uptimeClock');
 
       // Logger UI references (UPDATED)
       const loggerContainer = document.getElementById('loggerContainer');
@@ -531,7 +549,10 @@
           warnBox.textContent = 'Microphone access required — click "Restart" and allow microphone. Some browsers prevent auto-start on load.';
         }
         requestAnimationFrame(drawLiveWave);
-        setInterval(() => { liveClock.textContent = new Date().toLocaleString(); }, 1000);
+        setInterval(() => {
+          liveClock.textContent = new Date().toLocaleString();
+          uptimeClock.textContent = formatUptime(totalSamplesRecorded / sampleRate);
+        }, 1000);
       }
 
       async function restart() {
@@ -543,7 +564,7 @@
       function allocateCircularBuffer() {
         log('allocateCircularBuffer');
         if (sampleRate * MAX_SECONDS == bufferLength) {
-          log('Reusing existing circular buffer');
+          logToDiv('Reusing existing circular buffer');
           return;
         }
         bufferLength = sampleRate * MAX_SECONDS;
@@ -744,7 +765,7 @@
       }
 
       function extractLastNSecondsForLive() {
-        log('extractLastNSecondsForLive');
+        //log('extractLastNSecondsForLive');
         if (!buffer) return new Int16Array(0);
         const requiredSize = LIVE_SECONDS * sampleRate;
         const availableSamples = Math.min(requiredSize, bufferLength);
@@ -1073,6 +1094,56 @@
         }
       }
 
+      /**
+       * Formats a duration given in seconds into a human-readable string.
+       * The format adjusts based on the total duration:
+       * - < 1 hour: MM:SS (e.g., 03:05)
+       * - < 1 day: H:MM:SS (e.g., 1:23:05)
+       * - >= 1 day: Xd H:MM:SS (e.g., 1d 2:42:32)
+       *
+       * @param {number} totalSeconds The total duration in seconds.
+       * @returns {string} The formatted duration string.
+       */
+      function formatUptime(totalSeconds) {
+        // Ensure the input is a non-negative integer
+        let seconds = Math.max(0, Math.floor(totalSeconds));
+
+        // Helper to pad numbers with a leading zero (always pads to 2 digits)
+        const pad = (num) => String(num).padStart(2, '0');
+
+        // --- Calculate D, H, M, S components ---
+
+        const secondsPerDay = 86400; // 24 * 60 * 60
+        const secondsPerHour = 3600; // 60 * 60
+
+        const days = Math.floor(seconds / secondsPerDay);
+        seconds %= secondsPerDay;
+
+        const hours = Math.floor(seconds / secondsPerHour);
+        seconds %= secondsPerHour;
+
+        const minutes = Math.floor(seconds / 60);
+        seconds %= 60;
+
+        // --- Format the components based on duration magnitude ---
+
+        // If duration is less than 1 hour (M:SS or MM:SS)
+        if (days === 0 && hours === 0) {
+          // Use the requested padded minutes format (MM:SS) for clarity below 1 hour.
+          return `${pad(minutes)}:${pad(seconds)}`;
+        }
+
+        // If duration is 1 hour or more, but less than 1 day (H:MM:SS)
+        if (days === 0) {
+          // Hours are not padded, but minutes and seconds are.
+          return `${hours}:${pad(minutes)}:${pad(seconds)}`;
+        }
+
+        // If duration is 1 day or more (Xd H:MM:SS)
+        // Days are not padded, but hours, minutes, and seconds are.
+        return `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+      }
+
       // cleanup on page unload
       window.addEventListener('unload', () => {
         logToDiv('Unloading page, stopping recording.');
@@ -1103,9 +1174,9 @@
       window.addEventListener('visibilitychange', () => {
         const track = micStream?.getAudioTracks?.()[0];
         if (document.hidden) {
-          logToDiv('Background', audioContext?.state, track?.readyState);
+          logToDiv('Backgrounded', audioContext?.state, track?.readyState);
         } else {
-          logToDiv('Foreground', audioContext?.state, track?.readyState);
+          logToDiv('Foregrounded', audioContext?.state, track?.readyState);
           //audioContext?.resume();
         }
       });
@@ -1115,7 +1186,7 @@
       }
 
       function logToDiv(...msg) {
-        //log(...msg);
+        log(...msg);
         const timestamp = new Date().toLocaleTimeString();
         const message = msg.map(m => (typeof m === 'string' ? m : JSON.stringify(m))).join(' ');
 
