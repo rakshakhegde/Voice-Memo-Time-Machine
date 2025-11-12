@@ -891,11 +891,60 @@
         header.style.justifyContent = 'space-between';
         header.style.alignItems = 'center';
 
+        // --- Start Title/Edit Enhancements (Updated) ---
+
+        const titleContainer = document.createElement('div');
+        titleContainer.style.display = 'flex';
+        titleContainer.style.alignItems = 'center';
+        titleContainer.style.gap = '6px'; // Adjusted gap
+        titleContainer.style.cursor = 'pointer';
+
         const titleDiv = document.createElement('div');
         titleDiv.style.fontWeight = '700';
+        titleDiv.style.cursor = 'pointer'; // Indicate clickability
         const snippetDuration = intSamples.length / sampleRate;
-        titleDiv.textContent = `${formatSeconds(snippetDuration)} snippet`;
-        header.appendChild(titleDiv);
+        titleDiv.textContent = `${formatSeconds(snippetDuration)}`;
+
+        const editIcon = document.createElement('span');
+        // Using a standard grey pencil Unicode character
+        editIcon.textContent = '\u270E'; 
+        editIcon.title = 'Edit Title';
+        editIcon.style.cursor = 'pointer';
+        editIcon.style.padding = '5px'; // Increased padding for a larger hit area
+        editIcon.style.borderRadius = '50%';
+        editIcon.style.transition = 'background-color 0.2s, color 0.2s';
+        editIcon.style.color = '#555'; // Dark Grey color for the icon
+        editIcon.style.lineHeight = '1'; // Ensures the icon is centered vertically
+        editIcon.style.transform = 'scaleX(-1)';
+
+        // Hover effect for the pencil icon (Dark Round Background)
+        editIcon.onmouseover = () => {
+          editIcon.style.backgroundColor = 'rgba(0, 0, 0, 0.2)'; // Semi-transparent dark round background
+        };
+        editIcon.onmouseout = () => {
+          editIcon.style.backgroundColor = 'transparent';
+        };
+
+        // Make the title editable when the icon is clicked
+        editIcon.onclick = () => {
+          makeTitleEditable(titleDiv, editIcon);
+        };
+        
+        // Allow editing when the title text itself is clicked
+        titleDiv.onclick = () => {
+            makeTitleEditable(titleDiv, editIcon);
+        };
+
+        titleContainer.onclick = () => {
+            makeTitleEditable(titleDiv, editIcon);
+        };
+
+        titleContainer.appendChild(titleDiv);
+        titleContainer.appendChild(editIcon);
+        header.appendChild(titleContainer);
+
+        // --- End Title/Edit Enhancements ---
+
 
         const dateDiv = document.createElement('div');
         dateDiv.style.display = 'flex';
@@ -953,11 +1002,13 @@
         dl.textContent = 'Download';
         dl.onclick = () => {
           const stamp = snippetTime;
+          // Use the current title for the filename, sanitized
+          const currentTitle = titleDiv.textContent.replace(/[^a-z0-9]/gi, '_').toLowerCase();
           const timeStr = stamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
             .replaceAll(':', '-').replace(/\s/g, '');
           const dateStr = stamp.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: 'numeric' })
             .replaceAll('/', '-');
-          const name = `${formatSeconds(actualSeconds)} ${timeStr} ${dateStr} audio-timemachine.wav`;
+          const name = `${currentTitle} ${timeStr} ${dateStr} audio-timemachine.wav`;
           const a = document.createElement('a');
           a.href = url;
           a.download = name;
@@ -987,6 +1038,60 @@
         playerSeekUI(audio, canvas, intSamples);
 
         recStatus.textContent = 'Status: Recording';
+      }
+
+      // 🎶 Function to handle the title editing 🎶
+      function makeTitleEditable(titleDiv, editIcon) {
+        // Prevent editing if already an input field
+        if (titleDiv.querySelector('input')) return;
+
+        const currentText = titleDiv.textContent;
+
+        // 1. Create the input field
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = currentText;
+        input.style.fontWeight = '700'; // Keep the bold style
+        input.style.border = '1px solid #aaa'; // Subtle grey border
+        input.style.borderRadius = '4px';
+        input.style.padding = '2px 4px';
+        input.style.fontSize = 'inherit'; // Inherit font size
+        input.style.fontFamily = 'inherit'; // Inherit font family
+        input.style.color = 'inherit';
+        input.style.backgroundColor = 'transparent';
+        input.style.minWidth = '100px'; // Ensure input is wide enough
+
+        // 2. Replace the div content with the input
+        titleDiv.textContent = '';
+        titleDiv.appendChild(input);
+        input.focus();
+        input.select();
+        
+        // Hide the edit icon temporarily
+        editIcon.style.visibility = 'hidden';
+        
+        // Function to save the changes
+        const saveChanges = () => {
+            const newText = input.value.trim() || currentText; // Use original if new is empty
+            titleDiv.textContent = newText;
+            titleDiv.onclick = () => { makeTitleEditable(titleDiv, editIcon); }; // Restore click handler
+            editIcon.style.visibility = 'visible'; // Show icon again
+            editIcon.style.backgroundColor = 'transparent'; // Reset background if blur fires while hovering
+        };
+
+        // 3. Handle 'Enter' key press (or 'Go/Ok' on mobile keyboards)
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            saveChanges();
+          }
+        });
+
+        // 4. Handle loss of focus (blur)
+        input.addEventListener('blur', saveChanges);
+        
+        // Remove the direct click-to-edit handler from the div while editing
+        titleDiv.onclick = null;
       }
 
       // show playback progress overlay on snippet waveform
