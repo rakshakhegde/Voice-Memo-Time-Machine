@@ -13,6 +13,7 @@
       --card: #0f1620;
       --muted: #8b98a6;
       --accent: #6ee7b7;
+      --accent-dark: hsla(156, 40%, 24%, 0.5);
       --danger: #ff6b6b;
       --glass: rgba(255, 255, 255, 0.03);
     }
@@ -310,6 +311,12 @@
     #copy-feedback.show {
       opacity: 1;
     }
+
+    :focus {
+      outline: 1px solid var(--accent-dark);
+      outline-offset: 2px;
+      outline-width: 2px;
+    }
   </style>
 </head>
 
@@ -362,8 +369,10 @@
           <div class="muted small">Extract snippet durations</div>
           <div class="durations" id="durations">
             <button class="dur-btn" data-sec="10">10s</button>
-            <button class="dur-btn" data-sec="30">30s</button> <button class="dur-btn" data-sec="60">1m</button>
-            <button class="dur-btn" data-sec="120">2m</button> <button class="dur-btn" data-sec="300">5m</button>
+            <button class="dur-btn" data-sec="30">30s</button>
+            <button class="dur-btn" data-sec="60">1m</button>
+            <button class="dur-btn" data-sec="120">2m</button>
+            <button class="dur-btn" data-sec="300">5m</button>
             <button class="dur-btn" data-sec="600">10m</button>
             <button class="dur-btn" data-sec="1800">30m</button>
             <button class="dur-btn" data-sec="3600">1h</button>
@@ -917,7 +926,7 @@
 
         const editIcon = document.createElement('span');
         // Using a standard grey pencil Unicode character
-        editIcon.textContent = '\u270E'; 
+        editIcon.textContent = '\u270E';
         editIcon.title = 'Edit Title';
         editIcon.style.cursor = 'pointer';
         editIcon.style.padding = '5px'; // Increased padding for a larger hit area
@@ -939,14 +948,14 @@
         editIcon.onclick = () => {
           makeTitleEditable(titleDiv, editIcon);
         };
-        
+
         // Allow editing when the title text itself is clicked
         titleDiv.onclick = () => {
-            makeTitleEditable(titleDiv, editIcon);
+          makeTitleEditable(titleDiv, editIcon);
         };
 
         titleContainer.onclick = () => {
-            makeTitleEditable(titleDiv, editIcon);
+          makeTitleEditable(titleDiv, editIcon);
         };
 
         titleContainer.appendChild(titleDiv);
@@ -964,6 +973,7 @@
         const dateText = document.createElement('span');
         dateText.className = 'muted small';
         dateText.textContent = snippetTime.toLocaleString();
+        dateText.style.whiteSpace = 'nowrap';
         dateDiv.appendChild(dateText);
 
         const removeBtn = document.createElement('button');
@@ -1069,18 +1079,18 @@
         titleDiv.appendChild(input);
         input.focus();
         input.select();
-        
+
         // Hide the edit icon temporarily
         editIcon.style.visibility = 'hidden';
 
         const validInput = () => input.value.trim() || currentText;
-        
+
         // Function to save the changes
         const saveChanges = (newText) => {
-            titleDiv.textContent = newText;
-            titleDiv.onclick = () => { makeTitleEditable(titleDiv, editIcon); }; // Restore click handler
-            editIcon.style.visibility = 'visible'; // Show icon again
-            editIcon.style.backgroundColor = 'transparent'; // Reset background if blur fires while hovering
+          titleDiv.textContent = newText;
+          titleDiv.onclick = () => { makeTitleEditable(titleDiv, editIcon); }; // Restore click handler
+          editIcon.style.visibility = 'visible'; // Show icon again
+          editIcon.style.backgroundColor = 'transparent'; // Reset background if blur fires while hovering
         };
 
         // 3. Handle 'Enter' key press (or 'Go/Ok' on mobile keyboards)
@@ -1096,7 +1106,7 @@
 
         // 4. Handle loss of focus (blur)
         input.addEventListener('blur', () => saveChanges(validInput()));
-        
+
         // Remove the direct click-to-edit handler from the div while editing
         titleDiv.onclick = null;
       }
