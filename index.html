@@ -233,7 +233,7 @@
     .log-content {
       overflow-y: auto;
       max-height: 200px;
-      transition: all 0.3s ease-in-out;
+      transition: all 0.3s ease-out;
       border-top: 1px solid rgba(255, 255, 255, 0.05);
       padding: 8px 0;
     }
@@ -281,9 +281,6 @@
     #logContent {
       /* This is crucial for positioning the 'Copied!' message absolutely inside it */
       position: relative;
-
-      /* Add a smooth transition for the background color change */
-      transition: background-color 0.5s ease-in-out;
     }
 
     /* CSS for the dynamically created "Copied!" message */
