@@ -769,12 +769,13 @@
       }
 
       function writeToCircularBuffer(intSamples) {
-        for (let i = 0; i < intSamples.length; i++) {
-          buffer[writeIndex] = intSamples[i];
-          writeIndex++;
-          totalSamplesRecorded++;
-          if (writeIndex >= bufferLength) writeIndex = 0;
-        }
+        const samplesLength = intSamples.length;
+        const segmentLength = Math.min(samplesLength, bufferLength - writeIndex);
+        buffer.set(intSamples.subarray(0, segmentLength), writeIndex);
+        buffer.set(intSamples.subarray(segmentLength, samplesLength), 0);
+        writeIndex += samplesLength;
+        if (writeIndex >= bufferLength) writeIndex -= bufferLength;
+        totalSamplesRecorded += samplesLength;
       }
 
       function updateLevelMeter(rms) {
@@ -1193,7 +1194,7 @@
                 copyFeedback.classList.remove('show');
                 log('Logs successfully copied to clipboard!');
               }, 500);
-              
+
             })
             .catch(err => {
               logToDiv('Failed to copy logs: ', err);
