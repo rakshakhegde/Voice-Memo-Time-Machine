@@ -501,7 +501,6 @@
       let channelCount = 1;
       let selectedDeviceId = null;
       let deviceList = [];
-      let lastClickedSnippet = null;
       let reuseBuffer = null;
 
       let lastUsedMicLabel = localStorage.getItem('lastUsedMicLabel') || 'MacBook Pro Microphone';
@@ -1026,13 +1025,6 @@
               p.audio.pause();
             }
           }
-          lastClickedSnippet = audio;
-        });
-        audio.addEventListener('click', () => { lastClickedSnippet = audio; });
-
-        canvas.addEventListener('click', () => {
-          lastClickedSnippet = audio;
-          audio.play();
         });
 
         playerSeekUI(audio, canvas, intSamples);
@@ -1118,6 +1110,8 @@
           let percent = x / rect.width;
           if (percent <= 0.03) percent = 0;
           if (audio.duration) audio.currentTime = percent * audio.duration;
+          audio.play();
+          audio.focus();
           drawProgress();
         });
       }
@@ -1316,27 +1310,6 @@
       window.addEventListener('unload', () => {
         logToDiv('Unloading page, stopping recording.');
         if (micStream) micStream.getTracks().forEach(t => t.stop());
-      });
-
-      // spacebar toggles play/pause for last clicked snippet
-      window.addEventListener('keydown', ev => {
-        if (ev.code === 'Space') {
-          ev.preventDefault();
-
-          if (lastClickedSnippet) {
-            // toggle play/pause for the last clicked snippet
-            if (lastClickedSnippet.paused) lastClickedSnippet.play();
-            else lastClickedSnippet.pause();
-          } else {
-            // fallback: play the first snippet if available
-            const firstAudio = snippetsArea.querySelector('audio');
-            if (firstAudio) {
-              firstAudio.play();
-              lastClickedSnippet = firstAudio;
-            }
-            // if no audio exists, do nothing
-          }
-        }
       });
 
       window.addEventListener('visibilitychange', () => {
