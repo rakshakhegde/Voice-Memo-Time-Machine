@@ -1069,10 +1069,11 @@
         
         // Hide the edit icon temporarily
         editIcon.style.visibility = 'hidden';
+
+        const validInput = () => input.value.trim() || currentText;
         
         // Function to save the changes
-        const saveChanges = () => {
-            const newText = input.value.trim() || currentText; // Use original if new is empty
+        const saveChanges = (newText) => {
             titleDiv.textContent = newText;
             titleDiv.onclick = () => { makeTitleEditable(titleDiv, editIcon); }; // Restore click handler
             editIcon.style.visibility = 'visible'; // Show icon again
@@ -1083,12 +1084,15 @@
         input.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
-            saveChanges();
+            saveChanges(validInput());
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            saveChanges(currentText);
           }
         });
 
         // 4. Handle loss of focus (blur)
-        input.addEventListener('blur', saveChanges);
+        input.addEventListener('blur', () => saveChanges(validInput()));
         
         // Remove the direct click-to-edit handler from the div while editing
         titleDiv.onclick = null;
