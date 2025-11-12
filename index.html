@@ -568,6 +568,17 @@
         const seconds = Number(btn.dataset.sec);
         await createSnippet(seconds);
       });
+      durationsDiv.addEventListener('keydown', ev => {
+        if (ev.code === 'Space') {
+          ev.preventDefault();
+
+          const firstAudio = snippetsArea.querySelector('audio');
+          if (firstAudio) {
+            firstAudio.play();
+            firstAudio.focus();
+          }
+        }
+      });
 
       // ---------- Initialization ----------
       async function initAndStart() {
