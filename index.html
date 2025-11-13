@@ -526,6 +526,10 @@
       let lastUsedMicLabel = localStorage.getItem('lastUsedMicLabel') || 'MacBook Pro Microphone';
       let lastUsedDeviceId = localStorage.getItem('lastUsedDeviceId');
 
+      // Prepare audio
+      let puhBuffer;
+      let gainNode;
+
       // Inline AudioWorklet code
       const workletCode = `
         class RecorderProcessor extends AudioWorkletProcessor {
@@ -623,6 +627,7 @@
           uptimeClock.textContent = formatUptime(totalSamplesRecorded / sampleRate);
         }, 1000);
         setupLogger();
+        loadSound().then(buf => puhBuffer = buf);
       }
 
       async function restart() {
@@ -742,15 +747,15 @@
         // 8️⃣ Step 7: setup AudioContext and worklet
         if (!audioContext || audioContext.state === 'closed') {
           audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          sampleRate = audioContext.sampleRate;
-          srDisplay.textContent = 'Sample rate: ' + sampleRate + ' Hz';
-          allocateCircularBuffer();
-          audioContext.onstatechange = () => {
-            logToDiv(`🎧 AudioContext state: ${audioContext.state}`);
-          };
         } else if (audioContext.state === 'suspended') {
           await audioContext.resume();
         }
+        sampleRate = audioContext.sampleRate;
+        srDisplay.textContent = 'Sample rate: ' + sampleRate + ' Hz';
+        allocateCircularBuffer();
+        audioContext.onstatechange = () => {
+          logToDiv(`🎧 AudioContext state: ${audioContext.state}`);
+        };
 
         if (!audioContext.workletModuleLoaded) {
           await audioContext.audioWorklet.addModule(workletURL);
@@ -1072,6 +1077,18 @@
       function animateButtonToSnippet(btn, targetEl) {
         if (!btn || !targetEl) return;
 
+        if (puhBuffer && audioContext) {
+          const src = audioContext.createBufferSource();
+          src.buffer = puhBuffer;
+
+          if (!gainNode) {
+            gainNode = audioContext.createGain();
+            gainNode.gain.value = 0.1; // 10% volume
+          }
+          src.connect(gainNode).connect(audioContext.destination);
+          src.start(0);
+        }
+
         const startRect = btn.getBoundingClientRect();
         const endRect = targetEl.getBoundingClientRect();
         const clone = btn.cloneNode(true);
@@ -1387,6 +1404,19 @@
               logToDiv('Failed to copy logs: ', err);
             });
         });
+      }
+
+      async function loadSound() {
+        const response = await fetch("pah 12-20-08pm 13-11-2025 audio-timemachine [2025-11-13 123319].wav");
+        const arrayBuffer = await response.arrayBuffer();
+        await faudioContext();
+        return audioContext.decodeAudioData(arrayBuffer);
+      }
+
+      async function faudioContext() {
+        if (!audioContext || audioContext.state === 'closed') {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
       }
 
       // cleanup on page unload
