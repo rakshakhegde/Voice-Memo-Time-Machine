@@ -321,6 +321,12 @@
       outline-width: 2px;
       box-shadow: 0 0 6px var(--accent-dark);
     }
+
+    .clone-fly {
+      background: rgba(125, 211, 252, 0.15);
+      border-color: rgba(125, 211, 252, 0.4);
+      box-shadow: 0 0 12px rgba(125, 211, 252, 0.5);
+    }
   </style>
 </head>
 
@@ -580,6 +586,10 @@
         if (!btn) return;
         const seconds = Number(btn.dataset.sec);
         await createSnippet(seconds);
+
+        // Find last created snippet (you prepend snippets, so first child)
+        const newSnippet = snippetsArea.firstElementChild;
+        if (newSnippet) animateButtonToSnippet(btn, newSnippet.titleDiv);
       });
       durationsDiv.addEventListener('keydown', ev => {
         if (ev.code === 'Space') {
@@ -923,6 +933,7 @@
         titleContainer.style.cursor = 'pointer';
 
         const titleDiv = document.createElement('div');
+        card.titleDiv = titleDiv; // Expose for external access if needed
         titleDiv.style.fontWeight = '700';
         titleDiv.style.cursor = 'pointer'; // Indicate clickability
         const snippetDuration = intSamples.length / sampleRate;
@@ -1056,6 +1067,51 @@
 
         recStatus.textContent = 'Status: Recording';
       }
+
+      function animateButtonToSnippet(btn, targetEl) {
+        if (!btn || !targetEl) return;
+
+        const startRect = btn.getBoundingClientRect();
+        const endRect = targetEl.getBoundingClientRect();
+        const clone = btn.cloneNode(true);
+        const body = document.body;
+
+        clone.classList.add('clone-fly');
+        clone.style.position = 'fixed';
+        clone.style.left = startRect.left + 'px';
+        clone.style.top = startRect.top + 'px';
+        clone.style.margin = '0';
+        clone.style.zIndex = 9999;
+        clone.style.pointerEvents = 'none';
+        clone.style.transition = 'none';
+        clone.style.opacity = 1;
+        body.appendChild(clone);
+
+        const start = { x: startRect.left + startRect.width / 2, y: startRect.top + startRect.height / 2 };
+        const end = { x: endRect.left + endRect.width / 2, y: endRect.top + endRect.height / 2 };
+        const control = {
+          x: (start.x + end.x) / 2 + (Math.random() * 100 - 50), // offset for curve
+          y: Math.min(start.y, end.y) - 120 // lift upward
+        };
+
+        const duration = 800;
+        const startTime = performance.now();
+
+        function step(now) {
+          const t = Math.min(1, (now - startTime) / duration);
+          // quadratic Bézier interpolation
+          const x = (1 - t) ** 2 * start.x + 2 * (1 - t) * t * control.x + t ** 2 * end.x;
+          const y = (1 - t) ** 2 * start.y + 2 * (1 - t) * t * control.y + t ** 2 * end.y;
+          clone.style.transform = `translate(${x - startRect.left}px, ${y - startRect.top}px) scale(${1 - 0.3 * t})`;
+          clone.style.opacity = 1 - t;
+
+          if (t < 1) requestAnimationFrame(step);
+          else clone.remove();
+        }
+
+        requestAnimationFrame(step);
+      }
+
 
       // 🎶 Function to handle the title editing 🎶
       function makeTitleEditable(titleDiv, editIcon) {
