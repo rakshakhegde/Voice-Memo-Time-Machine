@@ -1037,7 +1037,6 @@
         const audio = document.createElement('audio');
         audio.controls = true;
         audio.src = url;
-        audio.preload = 'auto';
         playerWrap.appendChild(audio);
         card.audio = audio;
 
@@ -1084,6 +1083,27 @@
           if (e.key === 'ArrowRight') {
             e.preventDefault();
             audio.currentTime = Math.min(audio.duration - 0.1, audio.currentTime + 5);
+          }
+        });
+
+        audio.addEventListener('error', err => {
+          if (!err) return;
+          switch (err.code) {
+            case MediaError.MEDIA_ERR_ABORTED:
+              logToDiv('❌ Fetching aborted by user.');
+              break;
+            case MediaError.MEDIA_ERR_NETWORK:
+              logToDiv('🌐 Network error while fetching audio.');
+              break;
+            case MediaError.MEDIA_ERR_DECODE:
+              logToDiv('💥 Decode error — possibly unsupported or corrupted audio.');
+              break;
+            case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+              logToDiv('🚫 Media source not supported.');
+              break;
+            default:
+              logToDiv('⚠️ Unknown media error. Restarting audio source.');
+              audio.src = url;
           }
         });
 
