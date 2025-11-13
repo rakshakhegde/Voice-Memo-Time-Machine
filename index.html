@@ -7,6 +7,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Voice Memo Time Machine</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #0b0f12;
@@ -1089,12 +1090,13 @@
 
         const start = { x: startRect.left + startRect.width / 2, y: startRect.top + startRect.height / 2 };
         const end = { x: endRect.left + endRect.width / 2, y: endRect.top + endRect.height / 2 };
+
         const control = {
           x: (start.x + end.x) / 2 + (Math.random() * 100 - 50), // offset for curve
           y: Math.min(start.y, end.y) - 120 // lift upward
         };
 
-        const duration = 800;
+        const duration = 600;
         const startTime = performance.now();
 
         function step(now) {
@@ -1102,8 +1104,8 @@
           // quadratic Bézier interpolation
           const x = (1 - t) ** 2 * start.x + 2 * (1 - t) * t * control.x + t ** 2 * end.x;
           const y = (1 - t) ** 2 * start.y + 2 * (1 - t) * t * control.y + t ** 2 * end.y;
-          clone.style.transform = `translate(${x - startRect.left}px, ${y - startRect.top}px) scale(${1 - 0.3 * t})`;
-          clone.style.opacity = 1 - t;
+          clone.style.transform = `translate(${x - start.x}px, ${y - start.y}px) scale(${1 - 0.2 * t})`;
+          clone.style.opacity = (1 - t) * 0.8;
 
           if (t < 1) requestAnimationFrame(step);
           else clone.remove();
