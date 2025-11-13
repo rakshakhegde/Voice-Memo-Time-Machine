@@ -1072,6 +1072,21 @@
           }
         });
 
+        // Fix bug with right arrow bricking audio sometimes
+        audio.addEventListener('keydown', e => {
+          if (!audio.duration || isNaN(audio.duration)) return;
+
+          if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            audio.currentTime = Math.max(0, audio.currentTime - 5);
+          }
+
+          if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            audio.currentTime = Math.min(audio.duration - 0.1, audio.currentTime + 5);
+          }
+        });
+
         playerSeekUI(audio, canvas, intSamples);
 
         recStatus.textContent = 'Status: Recording';
