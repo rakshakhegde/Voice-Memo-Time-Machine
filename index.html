@@ -597,36 +597,40 @@
 
       let recorderNode;
 
-      // Start initialization
-      log('await initAndStart start');
-      await initAndStart();
-      log('await initAndStart done');
 
-      // UI wiring
-      log('restart UI wiring');
-      restartBtn.onclick = async () => { await restart(); };
-      deviceSelect.onchange = async () => { selectedDeviceId = deviceSelect.value; await restart(); };
-      durationsDiv.addEventListener('click', async ev => {
-        const btn = ev.target.closest('.dur-btn');
-        if (!btn) return;
-        const seconds = Number(btn.dataset.sec);
-        await createSnippet(seconds);
+      // The main function to run once the page and libraries are loaded
+      async function main() {
+        // Start initialization
+        log('await initAndStart start');
+        await initAndStart();
+        log('await initAndStart done');
 
-        // Find last created snippet (you prepend snippets, so first child)
-        const newSnippet = snippetsArea.firstElementChild;
-        if (newSnippet) animateButtonToSnippet(btn, newSnippet.titleDiv);
-      });
-      durationsDiv.addEventListener('keydown', ev => {
-        if (ev.code === 'Space') {
-          ev.preventDefault();
+        // UI wiring
+        log('restart UI wiring');
+        restartBtn.onclick = async () => { await restart(); };
+        deviceSelect.onchange = async () => { selectedDeviceId = deviceSelect.value; await restart(); };
+        durationsDiv.addEventListener('click', async ev => {
+          const btn = ev.target.closest('.dur-btn');
+          if (!btn) return;
+          const seconds = Number(btn.dataset.sec);
+          await createSnippet(seconds);
 
-          const firstAudio = snippetsArea.querySelector('audio');
-          if (firstAudio) {
-            firstAudio.play();
-            firstAudio.focus();
+          // Find last created snippet (you prepend snippets, so first child)
+          const newSnippet = snippetsArea.firstElementChild;
+          if (newSnippet) animateButtonToSnippet(btn, newSnippet.titleDiv);
+        });
+        durationsDiv.addEventListener('keydown', ev => {
+          if (ev.code === 'Space') {
+            ev.preventDefault();
+
+            const firstAudio = snippetsArea.querySelector('audio');
+            if (firstAudio) {
+              firstAudio.play();
+              firstAudio.focus();
+            }
           }
-        }
-      });
+        });
+      }
 
       // ---------- Initialization ----------
       async function initAndStart() {
@@ -1566,6 +1570,8 @@
         logContent.scrollTop = logContent.scrollHeight;
       }
 
+      // Run the main function when the entire page (including the external script) is loaded.
+      window.addEventListener('load', main);
 
     })();
   </script>
