@@ -7,6 +7,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Voice Memo Time Machine</title>
+
+  <!-- LAME JS Library (The MP3 Encoder) -->
+  <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -917,6 +920,56 @@
         return new Blob([view], { type: 'audio/wav' });
       }
 
+
+      // --- THE CORE CONVERSION FUNCTION ---
+      /**
+       * Converts raw 16-bit PCM audio data (Int16Array) to an MP3 Blob using lamejs.
+       * The only functional change for 48kHz is passing 48000 in the sampleRate argument.
+       * @param {Int16Array} samples - Raw 16-bit PCM audio samples.
+       * @param {number} sampleRate - The original sample rate (e.g., 48000).
+       * @param {number} channels - The number of channels (1 for mono, 2 for stereo).
+       * @param {number} bitrate - The target MP3 bitrate in kbps (e.g., 128).
+       * @returns {Blob} The encoded MP3 file as a Blob.
+       */
+      function convertWavToMp3(samples, sampleRate, channels = 1, bitrate = 128) {
+        // Note: The conversion logic (loop/chunking) is exactly the same, 
+        // only the sampleRate parameter passed to Mp3Encoder changes.
+        log(`Starting conversion: ${samples.length} samples, ${sampleRate}Hz, ${bitrate}kbps.`);
+
+        // Initialize the MP3 Encoder with the correct sample rate
+        const mp3Encoder = new lamejs.Mp3Encoder(channels, sampleRate, bitrate);
+        const mp3Data = [];
+
+        // MP3 standard frame size: 1152 samples
+        const sampleBlockSize = 1152;
+
+        // Process samples in chunks
+        for (let i = 0; i < samples.length; i += sampleBlockSize) {
+          const sampleChunk = samples.subarray(i, i + sampleBlockSize);
+
+          // Encode the chunk and get the resulting MP3 bytes
+          // For stereo, use: mp3Encoder.encodeBuffer(leftChannelChunk, rightChannelChunk);
+          const mp3buf = mp3Encoder.encodeBuffer(sampleChunk);
+
+          if (mp3buf.length > 0) {
+            // Use Int8Array for compatibility with lamejs output
+            mp3Data.push(new Int8Array(mp3buf));
+          }
+        }
+
+        // Flush the remaining data to complete the last frame
+        const finalMp3 = mp3Encoder.flush();
+        if (finalMp3.length > 0) {
+          mp3Data.push(new Int8Array(finalMp3));
+        }
+
+        // Combine all Int8Arrays into a single MP3 Blob
+        const mp3Blob = new Blob(mp3Data, { type: 'audio/mp3' });
+        logToDiv(`Conversion complete! MP3 Blob size: ${mp3Blob.size} bytes.`);
+
+        return mp3Blob;
+      }
+
       async function createSnippet(seconds) {
         log('createSnippet');
         recStatus.textContent = 'Status: Creating snippet…';
@@ -930,7 +983,7 @@
         }
 
         const intSamples = extractLastNSeconds(actualSeconds);
-        const blob = makeWavBlob(intSamples);
+        const blob = convertWavToMp3(intSamples, sampleRate, 1, 64); // 64 kbps mono MP3
         const url = URL.createObjectURL(blob);
         const snippetTime = new Date();
 
@@ -1065,7 +1118,7 @@
             .replaceAll(':', '-').replace(/\s/g, '');
           const dateStr = stamp.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: 'numeric' })
             .replaceAll('/', '-');
-          const name = `${currentTitle} ${timeStr} ${dateStr} audio-timemachine.wav`;
+          const name = `${currentTitle} ${timeStr} ${dateStr} audio-timemachine.mp3`;
           const a = document.createElement('a');
           a.href = url;
           a.download = name;
