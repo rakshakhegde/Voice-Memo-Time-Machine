@@ -195,7 +195,7 @@
 
     .warning {
       color: var(--danger);
-      font-size: 13px
+      font-size: 13px;
     }
 
     @media (max-width:880px) {
@@ -556,7 +556,7 @@
           constructor() {
             super();
             // Buffer to hold the converted Int16 data for posting back
-            this.int16Buffer = new Int16Array(128); 
+            this.int16Buffer = new Int16Array(128);
           }
           
           process(inputs) {
@@ -936,9 +936,9 @@
        * @returns {Blob} The encoded MP3 file as a Blob.
        */
       function convertWavToMp3(samples, sampleRate, channels = 1, bitrate = 128) {
-        // Note: The conversion logic (loop/chunking) is exactly the same, 
+        // Note: The conversion logic (loop/chunking) is exactly the same,
         // only the sampleRate parameter passed to Mp3Encoder changes.
-        log(`Starting conversion: ${samples.length} samples, ${sampleRate}Hz, ${bitrate}kbps.`);
+        logToDiv(`Starting conversion: ${samples.length} samples, ${sampleRate}Hz, ${bitrate}kbps.`);
 
         // Initialize the MP3 Encoder with the correct sample rate
         const mp3Encoder = new lamejs.Mp3Encoder(channels, sampleRate, bitrate);
