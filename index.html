@@ -1454,8 +1454,8 @@
         ctx.textBaseline = 'bottom';
         ctx.textAlign = 'left';
 
-        const formattedCurrent = (typeof formatTimeForDisplay === 'function') ? formatTimeForDisplay(Math.floor(currentTime)) : formatSeconds(Math.floor(currentTime));
-        const formattedTotal = (typeof formatTimeForDisplay === 'function') ? formatTimeForDisplay(Math.floor(duration)) : formatSeconds(Math.floor(duration));
+        const formattedCurrent = formatTimeForDisplay(Math.floor(currentTime));
+        const formattedTotal = formatTimeForDisplay(Math.floor(duration));
         // draw at 8px from left, 4px from bottom
         ctx.fillText(`${formattedCurrent} / ${formattedTotal}`, 12, h - 8);
       }
