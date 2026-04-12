@@ -198,7 +198,30 @@
       border-radius: 10px;
       background: transparent;
       border: 1px solid rgba(255, 255, 255, 0.06);
-      cursor: pointer
+      cursor: pointer;
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .progress-circle {
+      width: 16px;
+      height: 16px;
+    }
+
+    .progress-circle svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+
+    .progress-circle circle {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 2;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.1s;
     }
 
     .small {
@@ -1002,6 +1025,50 @@
         return mp3Blob;
       }
 
+      async function convertWavToMp3WithProgress(samples, sampleRate, channels = 1, bitrate = 128, progressCallback) {
+        return new Promise((resolve) => {
+          logToDiv(`Starting async conversion: ${samples.length} samples, ${sampleRate}Hz, ${bitrate}kbps.`);
+
+          const mp3Encoder = new lamejs.Mp3Encoder(channels, sampleRate, bitrate);
+          const mp3Data = [];
+          const sampleBlockSize = 1152;
+          const totalChunks = Math.ceil(samples.length / sampleBlockSize);
+          let chunkIndex = 0;
+
+          function processChunk() {
+            if (chunkIndex < totalChunks) {
+              const start = chunkIndex * sampleBlockSize;
+              const end = Math.min(start + sampleBlockSize, samples.length);
+              const sampleChunk = samples.subarray(start, end);
+
+              const mp3buf = mp3Encoder.encodeBuffer(sampleChunk);
+              if (mp3buf.length > 0) {
+                mp3Data.push(new Int8Array(mp3buf));
+              }
+
+              chunkIndex++;
+              const progress = chunkIndex / totalChunks;
+              progressCallback(progress);
+
+              // Yield to allow UI updates
+              setTimeout(processChunk, 0);
+            } else {
+              // Flush
+              const finalMp3 = mp3Encoder.flush();
+              if (finalMp3.length > 0) {
+                mp3Data.push(new Int8Array(finalMp3));
+              }
+
+              const mp3Blob = new Blob(mp3Data, { type: 'audio/mp3' });
+              logToDiv(`Async conversion complete! MP3 Blob size: ${mp3Blob.size} bytes.`);
+              resolve(mp3Blob);
+            }
+          }
+
+          processChunk();
+        });
+      }
+
       async function createSnippet(seconds) {
         log('createSnippet');
         recStatus.textContent = 'Status: Creating snippet…';
@@ -1046,6 +1113,12 @@
         titleDiv.style.cursor = 'pointer'; // Indicate clickability
         const snippetDuration = intSamples.length / sampleRate;
         titleDiv.textContent = `${formatSeconds(snippetDuration)}`;
+
+        // Store snippet state for trim handles
+        card.rawSamples = intSamples;
+        card.selectionStartSec = 0;
+        card.selectionEndSec = snippetDuration;
+        card.snippetDuration = snippetDuration;
 
         const editIcon = document.createElement('span');
         // Using a standard grey pencil Unicode character
@@ -1160,7 +1233,7 @@
         // Draw waveform once on the base canvas
         drawSnippetWaveform(intSamples, baseCanvas);
         // Draw initial overlay (time 0)
-        drawSnippetTimeUpdate(0, intSamples.length / sampleRate, overlayCanvas);
+        drawSnippetTimeUpdate(0, intSamples.length / sampleRate, overlayCanvas, card.selectionStartSec, card.selectionEndSec);
 
         // audio controls + download
         const controls = document.createElement('div');
@@ -1176,20 +1249,50 @@
 
         const dl = document.createElement('button');
         dl.className = 'download';
-        dl.textContent = 'Save';
-        dl.onclick = () => {
+        dl.innerHTML = `
+          <div class="progress-circle" style="display: none;">
+            <svg>
+              <circle cx="8" cy="8" r="6" stroke-dasharray="38" stroke-dashoffset="38"></circle>
+            </svg>
+          </div>
+          <span>Save</span>
+        `;
+        dl.onclick = async () => {
+          const progressCircle = dl.querySelector('.progress-circle');
+          const textSpan = dl.querySelector('span');
+          progressCircle.style.display = 'block';
+          textSpan.textContent = 'Saving...';
+          dl.disabled = true;
+
           const stamp = snippetTime;
-          // Use the current title for the filename, sanitized
           const currentTitle = titleDiv.textContent.replace(/[\/\\:*?"<>|]/g, '').trim();
           const timeStr = stamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
             .replaceAll(':', '-').replace(/\s/g, '');
           const dateStr = stamp.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: 'numeric' })
             .replaceAll('/', '-');
+
+          // Compute trimmed samples
+          const startSample = Math.floor(card.selectionStartSec * sampleRate);
+          const endSample = Math.floor(card.selectionEndSec * sampleRate);
+          const trimmedSamples = card.rawSamples.subarray(startSample, endSample);
+
+          // Convert with progress
+          const trimmedBlob = await convertWavToMp3WithProgress(trimmedSamples, sampleRate, 1, 64, (progress) => {
+            const circle = progressCircle.querySelector('circle');
+            const circumference = 38; // 2 * pi * 6
+            circle.style.strokeDashoffset = circumference - (progress * circumference);
+          });
+
+          const trimmedUrl = URL.createObjectURL(trimmedBlob);
           const name = `${currentTitle} ${timeStr} ${dateStr} audio-timemachine.mp3`;
           const a = document.createElement('a');
-          a.href = url;
+          a.href = trimmedUrl;
           a.download = name;
           a.click();
+
+          progressCircle.style.display = 'none';
+          textSpan.textContent = 'Save';
+          dl.disabled = false;
         };
 
         controls.appendChild(playerWrap);
@@ -1241,7 +1344,7 @@
           }
         });
 
-        playerSeekUI(audio, overlayCanvas);
+        playerSeekUI(audio, overlayCanvas, card);
 
         recStatus.textContent = 'Status: Recording';
       }
@@ -1363,25 +1466,78 @@
       }
 
       // show playback progress overlay on snippet waveform (overlay-only)
-      function playerSeekUI(audio, overlayCanvasEl) {
+      function playerSeekUI(audio, overlayCanvasEl, card) {
         const w = overlayCanvasEl.width;
         const h = overlayCanvasEl.height;
+        let isDragging = false;
+        let dragType = null; // 'start', 'end', or 'move'
 
         function drawProgress() {
-          drawSnippetTimeUpdate(audio.currentTime || 0, audio.duration, overlayCanvasEl);
+          drawSnippetTimeUpdate(audio.currentTime || 0, audio.duration, overlayCanvasEl, card.selectionStartSec, card.selectionEndSec);
         }
 
-        audio.addEventListener('timeupdate', drawProgress);
+        function updateSelection() {
+          drawProgress();
+        }
 
-        overlayCanvasEl.addEventListener('click', (ev) => {
+        audio.addEventListener('timeupdate', () => {
+          // Snap if outside selection
+          if (audio.currentTime < card.selectionStartSec) {
+            audio.currentTime = card.selectionStartSec;
+          } else if (audio.currentTime > card.selectionEndSec) {
+            audio.pause();
+            audio.currentTime = card.selectionEndSec;
+          }
+          drawProgress();
+        });
+
+        overlayCanvasEl.addEventListener('pointerdown', (ev) => {
           const rect = overlayCanvasEl.getBoundingClientRect();
           const x = ev.clientX - rect.left;
-          let percent = x / rect.width;
-          if (percent <= 0.03) percent = 0;
-          if (audio.duration) audio.currentTime = percent * audio.duration;
-          audio.play();
-          audio.focus();
+          const percent = x / rect.width;
+          const time = percent * card.snippetDuration;
+
+          const startPct = card.selectionStartSec / card.snippetDuration;
+          const endPct = card.selectionEndSec / card.snippetDuration;
+          const startX = startPct * rect.width;
+          const endX = endPct * rect.width;
+          const handleSize = 10; // pixels
+
+          if (Math.abs(x - startX) < handleSize) {
+            isDragging = true;
+            dragType = 'start';
+          } else if (Math.abs(x - endX) < handleSize) {
+            isDragging = true;
+            dragType = 'end';
+          } else if (time >= card.selectionStartSec && time <= card.selectionEndSec) {
+            // Click inside selection for seek
+            if (audio.duration) audio.currentTime = time;
+            audio.play();
+            audio.focus();
+          }
         });
+
+        overlayCanvasEl.addEventListener('pointermove', (ev) => {
+          if (!isDragging) return;
+          const rect = overlayCanvasEl.getBoundingClientRect();
+          const x = ev.clientX - rect.left;
+          const percent = Math.max(0, Math.min(1, x / rect.width));
+          const time = percent * card.snippetDuration;
+
+          if (dragType === 'start') {
+            card.selectionStartSec = Math.max(0, Math.min(card.selectionEndSec - 1, time));
+          } else if (dragType === 'end') {
+            card.selectionEndSec = Math.max(card.selectionStartSec + 1, Math.min(card.snippetDuration, time));
+          }
+          updateSelection();
+        });
+
+        overlayCanvasEl.addEventListener('pointerup', () => {
+          isDragging = false;
+          dragType = null;
+        });
+
+        drawProgress();
       }
 
       // waveform drawing for canvas (handles HiDPI canvas sizes)
@@ -1432,13 +1588,32 @@
       }
 
       // Draw time text and progress overlay on the overlay canvas
-      function drawSnippetTimeUpdate(currentTime, duration, canvasEl) {
+      function drawSnippetTimeUpdate(currentTime, duration, canvasEl, selectionStartSec, selectionEndSec) {
         const ctx = canvasEl.getContext('2d');
         const w = canvasEl.width;
         const h = canvasEl.height;
 
         // Clear only the overlay
         ctx.clearRect(0, 0, w, h);
+
+        // Dim outside selection
+        const startPct = selectionStartSec / duration;
+        const endPct = selectionEndSec / duration;
+        const startX = startPct * w;
+        const endX = endPct * w;
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect(0, 0, startX, h);
+        ctx.fillRect(endX, 0, w - endX, h);
+
+        // Selection region highlight
+        ctx.fillStyle = 'rgba(110,231,183,0.1)';
+        ctx.fillRect(startX, 0, endX - startX, h);
+
+        // Draw handles
+        ctx.fillStyle = 'rgba(110,231,183,0.8)';
+        const handleWidth = 4;
+        ctx.fillRect(startX - handleWidth / 2, 0, handleWidth, h);
+        ctx.fillRect(endX - handleWidth / 2, 0, handleWidth, h);
 
         // Progress overlay (use semi-transparent fill)
         const pct = duration ? (currentTime / duration) : 0;
@@ -1458,6 +1633,12 @@
         const formattedTotal = formatTimeForDisplay(Math.floor(duration));
         // draw at 8px from left, 4px from bottom
         ctx.fillText(`${formattedCurrent} / ${formattedTotal}`, 12, h - 8);
+
+        // Selection text
+        const formattedStart = formatTimeForDisplay(Math.floor(selectionStartSec));
+        const formattedEnd = formatTimeForDisplay(Math.floor(selectionEndSec));
+        ctx.textAlign = 'right';
+        ctx.fillText(`Trim: ${formattedStart} - ${formattedEnd}`, w - 12, h - 8);
       }
 
       // live waveform draw loop
