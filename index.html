@@ -1180,7 +1180,7 @@
         dl.onclick = () => {
           const stamp = snippetTime;
           // Use the current title for the filename, sanitized
-          const currentTitle = titleDiv.textContent.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+          const currentTitle = titleDiv.textContent.replace(/[\/\\:*?"<>|]/g, '').trim();
           const timeStr = stamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
             .replaceAll(':', '-').replace(/\s/g, '');
           const dateStr = stamp.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: 'numeric' })
