@@ -1656,8 +1656,10 @@
         // Draw handles
         ctx.fillStyle = 'rgba(110,231,183,0.8)';
         const handleWidth = 8;
-        ctx.fillRect(startX - handleWidth / 2, 0, handleWidth, h);
-        ctx.fillRect(endX - handleWidth / 2, 0, handleWidth, h);
+        ctx.beginPath();
+        ctx.roundRect(startX - handleWidth / 2, 0, handleWidth, h, 4);
+        ctx.roundRect(endX - handleWidth / 2, 0, handleWidth, h, 4);
+        ctx.fill();
         // Handlebar inside it
         ctx.fillStyle = 'rgba(0,0,0)';
         ctx.fillRect((startX - handleWidth / 2) + 4, h / 3, 1, h / 3);
