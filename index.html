@@ -1082,7 +1082,7 @@
         }
 
         const intSamples = extractLastNSeconds(actualSeconds);
-        const blob = convertWavToMp3(intSamples, sampleRate, 1, 64); // 64 kbps mono MP3
+        const blob = makeWavBlob(intSamples);
         const url = URL.createObjectURL(blob);
         const snippetTime = new Date();
 
@@ -1277,7 +1277,7 @@
           const trimmedSamples = card.rawSamples.subarray(startSample, endSample);
 
           // Convert with progress
-          const trimmedBlob = await convertWavToMp3WithProgress(trimmedSamples, sampleRate, 1, 64, (progress) => {
+          const trimmedBlob = await convertWavToMp3WithProgress(trimmedSamples, sampleRate, channels = 1, bitrate = 128, (progress) => {
             const circle = progressCircle.querySelector('circle');
             const circumference = 38; // 2 * pi * 6
             circle.style.strokeDashoffset = circumference - (progress * circumference);
@@ -1293,6 +1293,7 @@
           progressCircle.style.display = 'none';
           textSpan.textContent = 'Save';
           dl.disabled = false;
+          requestAnimationFrame(() => audio.focus());
         };
 
         controls.appendChild(playerWrap);
@@ -1470,14 +1471,11 @@
         const w = overlayCanvasEl.width;
         const h = overlayCanvasEl.height;
         let isDragging = false;
-        let dragType = null; // 'start', 'end', or 'move'
+        let dragType = null; // 'start', 'end', 'scrub'
+        let wasDragged = false; // Track if actual movement occurred
 
         function drawProgress() {
           drawSnippetTimeUpdate(audio.currentTime || 0, audio.duration, overlayCanvasEl, card.selectionStartSec, card.selectionEndSec);
-        }
-
-        function updateSelection() {
-          drawProgress();
         }
 
         audio.addEventListener('timeupdate', () => {
@@ -1491,10 +1489,19 @@
           drawProgress();
         });
 
+        audio.addEventListener('play', () => {
+          if ((card.selectionEndSec - audio.currentTime) < 0.1) {
+            audio.currentTime = card.selectionStartSec;
+            audio.play();
+          }
+        });
+
+        const setPercent = p => p <= 0.03 ? 0 : p;
+
         overlayCanvasEl.addEventListener('pointerdown', (ev) => {
           const rect = overlayCanvasEl.getBoundingClientRect();
           const x = ev.clientX - rect.left;
-          const percent = x / rect.width;
+          let percent = setPercent(x / rect.width);
           const time = percent * card.snippetDuration;
 
           const startPct = card.selectionStartSec / card.snippetDuration;
@@ -1506,35 +1513,69 @@
           if (Math.abs(x - startX) < handleSize) {
             isDragging = true;
             dragType = 'start';
+            wasDragged = false;
           } else if (Math.abs(x - endX) < handleSize) {
             isDragging = true;
             dragType = 'end';
+            wasDragged = false;
           } else if (time >= card.selectionStartSec && time <= card.selectionEndSec) {
-            // Click inside selection for seek
+            // Click inside selection for seek or scrubbing
+            isDragging = true;
+            dragType = 'scrub';
+            wasDragged = false;
             if (audio.duration) audio.currentTime = time;
+
             audio.play();
-            audio.focus();
+          } else {
+            // Click outside trim handles - snap to beginning or end
+            audio.currentTime = card.selectionStartSec;
+            if (time < card.selectionStartSec) {
+              audio.play();
+            }
           }
+
+          requestAnimationFrame(() => audio.focus());
         });
 
         overlayCanvasEl.addEventListener('pointermove', (ev) => {
           if (!isDragging) return;
+          wasDragged = true;
           const rect = overlayCanvasEl.getBoundingClientRect();
           const x = ev.clientX - rect.left;
-          const percent = Math.max(0, Math.min(1, x / rect.width));
+          let percent = setPercent(x / rect.width);
           const time = percent * card.snippetDuration;
 
-          if (dragType === 'start') {
+          if (dragType === 'scrub') {
+            // Scrubbing: update audio position while dragging (constrains to selection)
+            audio.currentTime = time;
+          } else if (dragType === 'start') {
             card.selectionStartSec = Math.max(0, Math.min(card.selectionEndSec - 1, time));
           } else if (dragType === 'end') {
             card.selectionEndSec = Math.max(card.selectionStartSec + 1, Math.min(card.snippetDuration, time));
           }
-          updateSelection();
+          if (audio.currentTime < card.selectionStartSec || audio.currentTime > card.selectionEndSec) {
+            audio.currentTime = Math.max(card.selectionStartSec, Math.min(card.selectionEndSec, audio.currentTime));
+          }
+          drawProgress();
         });
 
         overlayCanvasEl.addEventListener('pointerup', () => {
+          // Handle click-only (not dragged) vs drag interactions
+          if (isDragging && !wasDragged) {
+            // Click-only on handle: snap audio position to handle
+            if (dragType === 'start') {
+              audio.currentTime = card.selectionStartSec;
+            } else if (dragType === 'end') {
+              audio.currentTime = card.selectionEndSec;
+            }
+          }
+          if (dragType === 'scrub' && wasDragged) audio.pause();
+          // Scrubbing naturally ends when user releases; audio position already set by pointermove
           isDragging = false;
+          wasDragged = false;
           dragType = null;
+
+          requestAnimationFrame(() => audio.focus());
         });
 
         drawProgress();
