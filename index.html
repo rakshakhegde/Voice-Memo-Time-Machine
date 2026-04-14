@@ -1662,8 +1662,10 @@
         ctx.fill();
         // Handlebar inside it
         ctx.fillStyle = 'rgba(0,0,0)';
-        ctx.fillRect((startX - handleWidth / 2) + 4, h / 3, 1, h / 3);
-        ctx.fillRect((endX - handleWidth / 2) + 4, h / 3, 1, h / 3);
+        ctx.beginPath();
+        ctx.roundRect((startX - handleWidth / 2) + 3, h / 3, 2, h / 3, 4);
+        ctx.roundRect((endX - handleWidth / 2) + 3, h / 3, 2, h / 3, 4);
+        ctx.fill();
 
         // Progress overlay (use semi-transparent fill)
         const pct = duration ? (currentTime / duration) : 0;
