@@ -1528,9 +1528,11 @@
             audio.play();
           } else {
             // Click outside trim handles - snap to beginning or end
-            audio.currentTime = card.selectionStartSec;
             if (time < card.selectionStartSec) {
+              audio.currentTime = card.selectionStartSec;
               audio.play();
+            } else {
+              audio.currentTime = card.selectionEndSec;
             }
           }
 
@@ -1565,6 +1567,7 @@
             // Click-only on handle: snap audio position to handle
             if (dragType === 'start') {
               audio.currentTime = card.selectionStartSec;
+              audio.play();
             } else if (dragType === 'end') {
               audio.currentTime = card.selectionEndSec;
             }
