@@ -539,19 +539,6 @@
       const liveCtx = liveWave.getContext('2d');
 
       liveWave.refresh = () => drawLiveWave();
-      const liveWaveObserver = new ResizeObserver(() => {
-        const dpr = window.devicePixelRatio || 1;
-        const ctx = liveWave.getContext('2d');
-        const displayWidth = liveWave.clientWidth;
-        const displayHeight = liveWave.clientHeight;
-        if (liveWave.width !== displayWidth * dpr || liveWave.height !== displayHeight * dpr) {
-          liveWave.width = displayWidth * dpr;
-          liveWave.height = displayHeight * dpr;
-          ctx.scale(dpr, dpr);
-          liveWave.refresh();
-        }
-      });
-      liveWaveObserver.observe(liveWave);
       const levelBar = document.getElementById('level');
       const durationsDiv = document.getElementById('durations');
       const snippetsArea = document.getElementById('snippetsArea');
@@ -572,6 +559,27 @@
 
       const noSnippetMsg = document.getElementById('no-snippet-msg');
 
+      // Single ResizeObserver for all canvases (live + snippets)
+      const canvasResizeObserver = new ResizeObserver((entries) => {
+        entries.forEach((entry) => {
+          const canvas = entry.target;
+          if (canvas.refresh) {
+            const dpr = window.devicePixelRatio || 1;
+            const ctx = canvas.getContext('2d');
+            const displayWidth = canvas.clientWidth;
+            const displayHeight = canvas.clientHeight;
+            if (canvas.width !== displayWidth * dpr || canvas.height !== displayHeight * dpr) {
+              canvas.width = displayWidth * dpr;
+              canvas.height = displayHeight * dpr;
+              ctx.scale(dpr, dpr);
+              canvas.refresh();
+            }
+          }
+        });
+      });
+
+      // Observe the live waveform canvas
+      canvasResizeObserver.observe(liveWave);
 
       // Click to clear logs (UPDATED: now on clear button)
       clearLogBtn.addEventListener('click', (e) => {
@@ -1227,6 +1235,8 @@
         removeBtn.style.cursor = 'pointer';
         removeBtn.style.fontSize = '14px';
         removeBtn.onclick = () => {
+          // Disconnect observers for this snippet's canvases
+          card.canvases?.forEach(canvas => canvasResizeObserver.unobserve(canvas));
           snippetsArea.removeChild(card);
           if (snippetsArea.children.length === 0) noSnippetMsg.style.display = 'block';
         };
@@ -1278,19 +1288,8 @@
         //drawSnippetWaveform(intSamples, baseCanvas);
         baseCanvas.refresh = () => drawSnippetWaveform(intSamples, baseCanvas);
 
-        const baseObserver = new ResizeObserver(() => {
-          const dpr = window.devicePixelRatio || 1;
-          const ctx = baseCanvas.getContext('2d');
-          const displayWidth = baseCanvas.clientWidth;
-          const displayHeight = baseCanvas.clientHeight;
-          if (baseCanvas.width !== displayWidth * dpr || baseCanvas.height !== displayHeight * dpr) {
-            baseCanvas.width = displayWidth * dpr;
-            baseCanvas.height = displayHeight * dpr;
-            ctx.scale(dpr, dpr);
-            baseCanvas.refresh();
-          }
-        });
-        baseObserver.observe(baseCanvas);
+        // Observe with the consolidated canvasResizeObserver
+        canvasResizeObserver.observe(baseCanvas);
 
         // audio controls + download
         const controls = document.createElement('div');
@@ -1405,19 +1404,11 @@
         playerSeekUI(audio, overlayCanvas, card);
         overlayCanvas.refresh = () => playerSeekUI(audio, overlayCanvas, card);
 
-        const overlayObserver = new ResizeObserver(() => {
-          const dpr = window.devicePixelRatio || 1;
-          const ctx = overlayCanvas.getContext('2d');
-          const displayWidth = overlayCanvas.clientWidth;
-          const displayHeight = overlayCanvas.clientHeight;
-          if (overlayCanvas.width !== displayWidth * dpr || overlayCanvas.height !== displayHeight * dpr) {
-            overlayCanvas.width = displayWidth * dpr;
-            overlayCanvas.height = displayHeight * dpr;
-            ctx.scale(dpr, dpr);
-            overlayCanvas.refresh();
-          }
-        });
-        overlayObserver.observe(overlayCanvas);
+        // Observe with the consolidated canvasResizeObserver
+        canvasResizeObserver.observe(overlayCanvas);
+
+        // Store canvases on card for cleanup on removal
+        card.canvases = [baseCanvas, overlayCanvas];
 
         recStatus.textContent = 'Status: Recording';
       }
