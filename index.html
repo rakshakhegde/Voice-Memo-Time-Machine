@@ -538,7 +538,6 @@
       const liveWave = document.getElementById('liveWave');
       const liveCtx = liveWave.getContext('2d');
 
-      liveWave.refresh = () => drawLiveWave();
       const levelBar = document.getElementById('level');
       const durationsDiv = document.getElementById('durations');
       const snippetsArea = document.getElementById('snippetsArea');
@@ -563,17 +562,17 @@
       const canvasResizeObserver = new ResizeObserver((entries) => {
         entries.forEach((entry) => {
           const canvas = entry.target;
-          if (canvas.refresh) {
-            const dpr = window.devicePixelRatio || 1;
-            const ctx = canvas.getContext('2d');
-            const displayWidth = canvas.clientWidth;
-            const displayHeight = canvas.clientHeight;
-            if (canvas.width !== displayWidth * dpr || canvas.height !== displayHeight * dpr) {
-              canvas.width = displayWidth * dpr;
-              canvas.height = displayHeight * dpr;
-              ctx.scale(dpr, dpr);
-              canvas.refresh();
-            }
+          const dpr = window.devicePixelRatio || 1;
+          const ctx = canvas.getContext('2d');
+          const displayWidth = canvas.clientWidth;
+          const displayHeight = canvas.clientHeight;
+          const scaledW = displayWidth * dpr;
+          const scaledH = displayHeight * dpr;
+          if (canvas.width !== scaledW || canvas.height !== scaledH) {
+            canvas.width = scaledW;
+            canvas.height = scaledH;
+            ctx.scale(dpr, dpr);
+            canvas.refresh?.();
           }
         });
       });
