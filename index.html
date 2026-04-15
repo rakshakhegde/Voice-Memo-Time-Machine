@@ -1650,7 +1650,7 @@
         ctx.fillRect(endX, 0, w - endX, h);
 
         // Selection region highlight
-        ctx.fillStyle = 'rgba(110,231,183,0.1)';
+        ctx.fillStyle = 'rgba(110,231,183,0.05)';
         ctx.fillRect(startX, 0, endX - startX, h);
 
         // Draw handles
@@ -1670,7 +1670,7 @@
         // Progress overlay (use semi-transparent fill)
         const pct = duration ? (currentTime / duration) : 0;
         ctx.fillStyle = 'rgba(100,255,200,0.08)';
-        ctx.fillRect(0, 0, Math.max(2, pct * w), h);
+        ctx.fillRect(startX, 0, pct * w - startX, h);
         ctx.fillStyle = 'rgba(255,255,255,0.08)';
         ctx.fillRect(Math.max(0, pct * w - 1), 0, 2, h);
 
