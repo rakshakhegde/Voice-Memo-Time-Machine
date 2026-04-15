@@ -1727,8 +1727,10 @@
         // Handle grip inside it
         ctx.fillStyle = 'rgba(11, 15, 18, 0.95)';
         ctx.beginPath();
-        ctx.roundRect((startX - handleWidth / 2) + 3, h / 3, 2, h / 3, 4);
-        ctx.roundRect((endX - handleWidth / 2) + 3, h / 3, 2, h / 3, 4);
+        ctx.roundRect((startX - handleWidth / 2) + 2, h / 3, 1, h / 3, 4);
+        ctx.roundRect((startX - handleWidth / 2) + 5, h / 3, 1, h / 3, 4);
+        ctx.roundRect((endX - handleWidth / 2) + 2, h / 3, 1, h / 3, 4);
+        ctx.roundRect((endX - handleWidth / 2) + 5, h / 3, 1, h / 3, 4);
         ctx.fill();
 
         // Progress overlay (use semi-transparent fill)
