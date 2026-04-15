@@ -1265,8 +1265,6 @@
 
         // Draw waveform once on the base canvas
         drawSnippetWaveform(intSamples, baseCanvas);
-        // Draw initial overlay (time 0)
-        drawSnippetTimeUpdate(0, intSamples.length / sampleRate, overlayCanvas, card.selectionStartSec, card.selectionEndSec);
 
         // audio controls + download
         const controls = document.createElement('div');
@@ -1511,7 +1509,7 @@
         let wasDragged = false; // Track if actual movement occurred
 
         function drawProgress() {
-          drawSnippetTimeUpdate(audio.currentTime || 0, audio.duration, overlayCanvasEl, card.selectionStartSec, card.selectionEndSec);
+          drawSnippetTimeUpdate(audio.currentTime || 0, card.snippetDuration, overlayCanvasEl, card.selectionStartSec, card.selectionEndSec);
         }
 
         audio.addEventListener('timeupdate', () => {
