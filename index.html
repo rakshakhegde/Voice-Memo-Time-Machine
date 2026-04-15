@@ -537,6 +537,21 @@
       const recStatus = document.getElementById('recStatus');
       const liveWave = document.getElementById('liveWave');
       const liveCtx = liveWave.getContext('2d');
+
+      liveWave.refresh = () => drawLiveWave();
+      const liveWaveObserver = new ResizeObserver(() => {
+        const dpr = window.devicePixelRatio || 1;
+        const ctx = liveWave.getContext('2d');
+        const displayWidth = liveWave.clientWidth;
+        const displayHeight = liveWave.clientHeight;
+        if (liveWave.width !== displayWidth * dpr || liveWave.height !== displayHeight * dpr) {
+          liveWave.width = displayWidth * dpr;
+          liveWave.height = displayHeight * dpr;
+          ctx.scale(dpr, dpr);
+          liveWave.refresh();
+        }
+      });
+      liveWaveObserver.observe(liveWave);
       const levelBar = document.getElementById('level');
       const durationsDiv = document.getElementById('durations');
       const snippetsArea = document.getElementById('snippetsArea');
@@ -1225,10 +1240,6 @@
         const canvas = document.createElement('canvas');
         canvas.style.width = '100%';
         canvas.style.height = '120px';
-        const dpr = window.devicePixelRatio || 1;
-        const parentWidth = Math.max(800, snippetsArea.clientWidth || 800);
-        canvas.width = Math.round(parentWidth * dpr);
-        canvas.height = Math.round(120 * dpr);
 
         // Create a container that stacks two canvases: base waveform + overlay
         const waveformContainer = document.createElement('div');
@@ -1264,7 +1275,22 @@
         card.appendChild(waveformContainer);
 
         // Draw waveform once on the base canvas
-        drawSnippetWaveform(intSamples, baseCanvas);
+        //drawSnippetWaveform(intSamples, baseCanvas);
+        baseCanvas.refresh = () => drawSnippetWaveform(intSamples, baseCanvas);
+
+        const baseObserver = new ResizeObserver(() => {
+          const dpr = window.devicePixelRatio || 1;
+          const ctx = baseCanvas.getContext('2d');
+          const displayWidth = baseCanvas.clientWidth;
+          const displayHeight = baseCanvas.clientHeight;
+          if (baseCanvas.width !== displayWidth * dpr || baseCanvas.height !== displayHeight * dpr) {
+            baseCanvas.width = displayWidth * dpr;
+            baseCanvas.height = displayHeight * dpr;
+            ctx.scale(dpr, dpr);
+            baseCanvas.refresh();
+          }
+        });
+        baseObserver.observe(baseCanvas);
 
         // audio controls + download
         const controls = document.createElement('div');
@@ -1377,6 +1403,21 @@
         });
 
         playerSeekUI(audio, overlayCanvas, card);
+        overlayCanvas.refresh = () => playerSeekUI(audio, overlayCanvas, card);
+
+        const overlayObserver = new ResizeObserver(() => {
+          const dpr = window.devicePixelRatio || 1;
+          const ctx = overlayCanvas.getContext('2d');
+          const displayWidth = overlayCanvas.clientWidth;
+          const displayHeight = overlayCanvas.clientHeight;
+          if (overlayCanvas.width !== displayWidth * dpr || overlayCanvas.height !== displayHeight * dpr) {
+            overlayCanvas.width = displayWidth * dpr;
+            overlayCanvas.height = displayHeight * dpr;
+            ctx.scale(dpr, dpr);
+            overlayCanvas.refresh();
+          }
+        });
+        overlayObserver.observe(overlayCanvas);
 
         recStatus.textContent = 'Status: Recording';
       }
@@ -1499,8 +1540,6 @@
 
       // show playback progress overlay on snippet waveform (overlay-only)
       function playerSeekUI(audio, overlayCanvasEl, card) {
-        const w = overlayCanvasEl.width;
-        const h = overlayCanvasEl.height;
         let handleClicked = false;
         const START = 'START';
         const END = 'END';
@@ -1622,8 +1661,8 @@
       // waveform drawing for canvas (handles HiDPI canvas sizes)
       function drawSnippetWaveform(intSamples, canvasEl) {
         const ctx = canvasEl.getContext('2d');
-        const w = canvasEl.width;
-        const h = canvasEl.height;
+        const w = canvasEl.clientWidth;
+        const h = canvasEl.clientHeight;
 
         // Clear the canvas
         ctx.clearRect(0, 0, w, h);
@@ -1669,8 +1708,8 @@
       // Draw time text and progress overlay on the overlay canvas
       function drawSnippetTimeUpdate(currentTime, duration, canvasEl, selectionStartSec, selectionEndSec) {
         const ctx = canvasEl.getContext('2d');
-        const w = canvasEl.width;
-        const h = canvasEl.height;
+        const w = canvasEl.clientWidth;
+        const h = canvasEl.clientHeight;
 
         // Clear only the overlay
         ctx.clearRect(0, 0, w, h);
@@ -1737,19 +1776,10 @@
 
         const canvas = liveWave;
         const ctx = liveCtx;
-        const dpr = devicePixelRatio || 1;
         const wCss = canvas.clientWidth;
         const hCss = canvas.clientHeight;
-        const w = Math.round(wCss * dpr);
-        const h = Math.round(hCss * dpr);
-        if (canvas.width !== w || canvas.height !== h) {
-          canvas.width = w;
-          canvas.height = h;
-        }
 
-        ctx.clearRect(0, 0, w, h);
-        ctx.save();
-        ctx.scale(dpr, dpr);
+        ctx.clearRect(0, 0, wCss, hCss);
         ctx.lineWidth = 1.2;
         ctx.strokeStyle = 'rgba(110,231,183,0.95)';
         ctx.beginPath();
@@ -1781,7 +1811,6 @@
           ctx.fillText('waiting for audio…', 12, 18);
         }
 
-        ctx.restore();
         requestAnimationFrame(drawLiveWave);
       }
 
