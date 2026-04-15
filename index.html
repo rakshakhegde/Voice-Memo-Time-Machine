@@ -648,6 +648,40 @@
 
       let recorderNode;
 
+      // MP3 Encoder Web Worker for background processing
+      let mp3EncoderWorker;
+      let activeWorkerRequests = new Map();
+      let nextMessageId = 0;
+
+      function initializeMP3Worker() {
+        if (mp3EncoderWorker) return; // Already initialized
+        try {
+          mp3EncoderWorker = new Worker('mp3-encoder-worker.js');
+          mp3EncoderWorker.onmessage = (event) => {
+            const { type, messageId, progress, data, size, error } = event.data;
+            const request = activeWorkerRequests.get(messageId);
+            if (!request) return;
+
+            if (type === 'progress') {
+              request.progressCallback?.(progress);
+            } else if (type === 'complete') {
+              const blob = new Blob([data], { type: 'audio/mp3' });
+              logToDiv(`Worker conversion complete! MP3 Blob size: ${size} bytes.`);
+              request.resolve(blob);
+              activeWorkerRequests.delete(messageId);
+            } else if (type === 'error') {
+              logToDiv(`❌ Worker error: ${error}`);
+              request.reject(new Error(error));
+              activeWorkerRequests.delete(messageId);
+            }
+          };
+          logToDiv('✓ MP3 Encoder Worker initialized');
+        } catch (err) {
+          logToDiv(`⚠️ Could not initialize Worker (fallback to main thread): ${err.message}`);
+          mp3EncoderWorker = null;
+        }
+      }
+
 
       // The main function to run once the page and libraries are loaded
       async function main() {
@@ -686,6 +720,8 @@
       // ---------- Initialization ----------
       async function initAndStart() {
         log('initAndStart');
+        // Initialize MP3 encoder worker for background processing
+        initializeMP3Worker();
         try {
           await startRecordingWithWorklet();
           recStatus.textContent = 'Status: Recording';
@@ -1026,47 +1062,43 @@
       }
 
       async function convertWavToMp3WithProgress(samples, sampleRate, channels = 1, bitrate = 128, progressCallback) {
-        return new Promise((resolve) => {
-          logToDiv(`Starting async conversion: ${samples.length} samples, ${sampleRate}Hz, ${bitrate}kbps.`);
+        // Ensure worker is initialized
+        if (!mp3EncoderWorker) {
+          initializeMP3Worker();
+        }
 
-          const mp3Encoder = new lamejs.Mp3Encoder(channels, sampleRate, bitrate);
-          const mp3Data = [];
-          const sampleBlockSize = 1152;
-          const totalChunks = Math.ceil(samples.length / sampleBlockSize);
-          let chunkIndex = 0;
+        // Fallback to main thread if Worker unavailable
+        if (!mp3EncoderWorker) {
+          return convertWavToMp3FallbackMainThread(samples, sampleRate, channels, bitrate, progressCallback);
+        }
 
-          function processChunk() {
-            if (chunkIndex < totalChunks) {
-              const start = chunkIndex * sampleBlockSize;
-              const end = Math.min(start + sampleBlockSize, samples.length);
-              const sampleChunk = samples.subarray(start, end);
+        return new Promise((resolve, reject) => {
+          logToDiv(`Starting Web Worker conversion: ${samples.length} samples, ${sampleRate}Hz, ${bitrate}kbps.`);
 
-              const mp3buf = mp3Encoder.encodeBuffer(sampleChunk);
-              if (mp3buf.length > 0) {
-                mp3Data.push(new Int8Array(mp3buf));
-              }
+          const messageId = nextMessageId++;
+          activeWorkerRequests.set(messageId, {
+            resolve,
+            reject,
+            progressCallback
+          });
 
-              chunkIndex++;
-              const progress = chunkIndex / totalChunks;
-              progressCallback(progress);
-
-              // Yield to allow UI updates
-              setTimeout(processChunk, 0);
-            } else {
-              // Flush
-              const finalMp3 = mp3Encoder.flush();
-              if (finalMp3.length > 0) {
-                mp3Data.push(new Int8Array(finalMp3));
-              }
-
-              const mp3Blob = new Blob(mp3Data, { type: 'audio/mp3' });
-              logToDiv(`Async conversion complete! MP3 Blob size: ${mp3Blob.size} bytes.`);
-              resolve(mp3Blob);
-            }
-          }
-
-          processChunk();
+          // Send to worker without transfer to preserve main thread access
+          // (We need to keep the samples available on main thread for other operations)
+          mp3EncoderWorker.postMessage({
+            samples: samples,
+            sampleRate,
+            channels,
+            bitrate,
+            messageId
+          });
         });
+      }
+
+      // Fallback: main thread conversion if Worker is unavailable
+      async function convertWavToMp3FallbackMainThread(samples, sampleRate, channels = 1, bitrate = 128, progressCallback) {
+        // Use the original convertWavToMp3 function logic but with progress
+        logToDiv(`⚙️ Fallback: Converting on main thread...`);
+        return convertWavToMp3(samples, sampleRate, channels, bitrate);
       }
 
       async function createSnippet(seconds) {
