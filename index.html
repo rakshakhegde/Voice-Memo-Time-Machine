@@ -1418,7 +1418,7 @@
 
           if (!gainNode) {
             gainNode = audioContext.createGain();
-            gainNode.gain.value = 0.1; // 10% volume
+            // gainNode.gain.value = 0.1; // 10% volume
           }
           src.connect(gainNode).connect(audioContext.destination);
           src.start(0);
@@ -1928,7 +1928,7 @@
       }
 
       async function loadSound() {
-        const response = await fetch("OLIVER_percussion_mouth_pop.wav");
+        const response = await fetch("faaah.mp3");
         const arrayBuffer = await response.arrayBuffer();
         await faudioContext();
         return audioContext.decodeAudioData(arrayBuffer);
