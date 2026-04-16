@@ -1143,7 +1143,7 @@
         if (snippetsArea.children.length == 0) noSnippetMsg.style.display = 'none';
 
         while (snippetsArea.children.length >= MAX_SNIPPETS) {
-          snippetsArea.removeChild(snippetsArea.lastChild);
+          removeSnippet(snippetsArea.lastChild);
         }
 
         const card = document.createElement('div');
@@ -1233,14 +1233,7 @@
         removeBtn.style.color = 'var(--danger)';
         removeBtn.style.cursor = 'pointer';
         removeBtn.style.fontSize = '14px';
-        removeBtn.onclick = () => {
-          // Disconnect observers for this snippet's canvases
-          card.canvases?.forEach(canvas => canvasResizeObserver.unobserve(canvas));
-          document.removeEventListener('pointermove', card.pointermove);
-          document.removeEventListener('pointerup', card.pointerup);
-          snippetsArea.removeChild(card);
-          if (snippetsArea.children.length === 0) noSnippetMsg.style.display = 'block';
-        };
+        removeBtn.onclick = () => removeSnippet(card);
         dateDiv.appendChild(removeBtn);
 
         header.appendChild(dateDiv);
@@ -1821,6 +1814,16 @@
         }
 
         requestAnimationFrame(drawLiveWave);
+      }
+
+      function removeSnippet(snippet) {
+        // Disconnect observers for this snippet's canvases
+        snippet.canvases?.forEach(canvas => canvasResizeObserver.unobserve(canvas));
+        if (snippet.pointermove) document.removeEventListener('pointermove', snippet.pointermove);
+        if (snippet.pointerup) document.removeEventListener('pointerup', snippet.pointerup);
+
+        snippet.remove();
+        if (snippetsArea.children.length === 0) noSnippetMsg.style.display = 'block';
       }
 
       function formatSeconds(s) {
