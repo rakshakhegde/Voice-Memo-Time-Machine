@@ -1559,12 +1559,13 @@
           }
         });
 
-        const setPercent = p => p < 0.03 ? 0 : p > 0.97 ? 1 : p;
+        const snapStart = p => p < 0.03 ? 0 : p;
+        const snapEnd = p => p > 0.97 ? 1 : p;
 
         overlayCanvasEl.addEventListener('pointerdown', (ev) => {
           const rect = overlayCanvasEl.getBoundingClientRect();
           const x = ev.clientX - rect.left;
-          let percent = setPercent(x / rect.width);
+          const percent = snapStart(x / rect.width);
           const time = percent * card.snippetDuration;
 
           const startPct = card.selectionStartSec / card.snippetDuration;
@@ -1607,7 +1608,7 @@
           wasDragged = true;
           const rect = overlayCanvasEl.getBoundingClientRect();
           const x = ev.clientX - rect.left;
-          let percent = setPercent(x / rect.width);
+          const percent = snapEnd(snapStart(x / rect.width));
           const time = percent * card.snippetDuration;
 
           if (dragType === SCRUB) {
