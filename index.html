@@ -1559,7 +1559,7 @@
           }
         });
 
-        const setPercent = p => p <= 0.03 ? 0 : p;
+        const setPercent = p => p < 0.03 ? 0 : p > 0.97 ? 1 : p;
 
         overlayCanvasEl.addEventListener('pointerdown', (ev) => {
           const rect = overlayCanvasEl.getBoundingClientRect();
