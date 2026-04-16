@@ -1236,6 +1236,8 @@
         removeBtn.onclick = () => {
           // Disconnect observers for this snippet's canvases
           card.canvases?.forEach(canvas => canvasResizeObserver.unobserve(canvas));
+          document.removeEventListener('pointermove', card.pointermove);
+          document.removeEventListener('pointerup', card.pointerup);
           snippetsArea.removeChild(card);
           if (snippetsArea.children.length === 0) noSnippetMsg.style.display = 'block';
         };
@@ -1603,29 +1605,35 @@
           requestAnimationFrame(() => audio.focus());
         });
 
-        overlayCanvasEl.addEventListener('pointermove', (ev) => {
+        card.pointermove = (ev) => {
           if (!handleClicked) return;
+          if (ev.buttons !== 1) { // check if ev left mouse button is held down
+            handleClicked = false;
+            return;
+          }
+
           wasDragged = true;
           const rect = overlayCanvasEl.getBoundingClientRect();
           const x = ev.clientX - rect.left;
           const percent = snapEnd(snapStart(x / rect.width));
           const time = percent * card.snippetDuration;
+          const smallestDuration = 1;
 
           if (dragType === SCRUB) {
             // Scrubbing: update audio position while dragging (constrains to selection)
             audio.currentTime = time;
           } else if (dragType === START) {
-            card.selectionStartSec = Math.max(0, Math.min(card.selectionEndSec - 1, time));
+            card.selectionStartSec = Math.max(0, Math.min(card.selectionEndSec - smallestDuration, time));
           } else if (dragType === END) {
-            card.selectionEndSec = Math.max(card.selectionStartSec + 1, Math.min(card.snippetDuration, time));
+            card.selectionEndSec = Math.max(card.selectionStartSec + smallestDuration, Math.min(card.snippetDuration, time));
           }
           if (audio.currentTime < card.selectionStartSec || audio.currentTime > card.selectionEndSec) {
             audio.currentTime = Math.max(card.selectionStartSec, Math.min(card.selectionEndSec, audio.currentTime));
           }
           drawProgress();
-        });
+        };
 
-        function pointerUpped() {
+        card.pointerup = () => {
           // Handle click-only (not dragged) vs drag interactions
           if (handleClicked && !wasDragged) {
             // Click-only on handle: snap audio position to handle
@@ -1643,8 +1651,9 @@
           dragType = null;
         }
 
-        overlayCanvasEl.addEventListener('pointerup', () => pointerUpped());
-        overlayCanvasEl.addEventListener('pointerleave', () => pointerUpped());
+        document.addEventListener('pointermove', card.pointermove);
+        document.addEventListener('pointerup', card.pointerup);
+        //overlayCanvasEl.addEventListener('pointerleave', () => pointerUpped());
 
         drawProgress();
       }
