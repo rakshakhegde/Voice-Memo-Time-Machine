@@ -959,7 +959,7 @@
         };
 
         recognition.onerror = (event) => {
-          logToDiv(`⚠️ Speech err: \${event.error}`);
+          logToDiv(`⚠️ Speech err: `, event.error);
         };
 
         recognition.onend = () => {
