@@ -1982,7 +1982,7 @@
       }
 
       async function loadSound() {
-        const response = await fetch("faaah.mp3");
+        const response = await fetch("core-sound-effect.mp3");
         const arrayBuffer = await response.arrayBuffer();
         await faudioContext();
         return audioContext.decodeAudioData(arrayBuffer);
