@@ -560,11 +560,11 @@
 
       const noSnippetMsg = document.getElementById('no-snippet-msg');
 
-      // Single ResizeObserver for all canvases (live + snippets)
-      const canvasResizeObserver = new ResizeObserver((entries) => {
-        entries.forEach((entry) => {
-          const canvas = entry.target;
+      // Single ResizeObserver for the document that updates all canvases dynamically
+      const canvasResizeObserver = new ResizeObserver(() => {
+        document.querySelectorAll('canvas').forEach((canvas) => {
           const dpr = window.devicePixelRatio || 1;
+          log('canvas id: ', canvas.id, dpr);
           const ctx = canvas.getContext('2d');
           const displayWidth = canvas.clientWidth;
           const displayHeight = canvas.clientHeight;
@@ -579,8 +579,8 @@
         });
       });
 
-      // Observe the live waveform canvas
-      canvasResizeObserver.observe(liveWave);
+      // Observe the document body
+      canvasResizeObserver.observe(document.body);
 
       // Click to clear logs (UPDATED: now on clear button)
       clearLogBtn.addEventListener('click', (e) => {
@@ -1284,9 +1284,6 @@
         //drawSnippetWaveform(intSamples, baseCanvas);
         baseCanvas.refresh = () => drawSnippetWaveform(intSamples, baseCanvas);
 
-        // Observe with the consolidated canvasResizeObserver
-        canvasResizeObserver.observe(baseCanvas);
-
         // audio controls + download
         const controls = document.createElement('div');
         controls.className = 'snippet-controls';
@@ -1399,9 +1396,6 @@
 
         playerSeekUI(audio, overlayCanvas, card);
         overlayCanvas.refresh = () => playerSeekUI(audio, overlayCanvas, card);
-
-        // Observe with the consolidated canvasResizeObserver
-        canvasResizeObserver.observe(overlayCanvas);
 
         // Store canvases on card for cleanup on removal
         card.canvases = [baseCanvas, overlayCanvas];
@@ -1820,8 +1814,6 @@
       }
 
       function removeSnippet(snippet) {
-        // Disconnect observers for this snippet's canvases
-        snippet.canvases?.forEach(canvas => canvasResizeObserver.unobserve(canvas));
         if (snippet.pointermove) document.removeEventListener('pointermove', snippet.pointermove);
         if (snippet.pointerup) document.removeEventListener('pointerup', snippet.pointerup);
 
