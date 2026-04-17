@@ -617,6 +617,7 @@
       let selectedDeviceId = null;
       let deviceList = [];
       let reuseBuffer = null;
+      let speechRecognitionObj = null;
 
       let lastUsedMicLabel = localStorage.getItem('lastUsedMicLabel') || 'MacBook Pro Microphone';
       let lastUsedDeviceId = localStorage.getItem('lastUsedDeviceId');
@@ -924,10 +925,63 @@
         recording = true;
 
         logToDiv("🎬 Recording started with:", chosenDevice.label);
+
+        if (!speechRecognitionObj) speechRecognitionObj = initSpeechRecognition();
+      }
+
+      function initSpeechRecognition() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+          logToDiv("⚠️ Web Speech API not supported in this browser.");
+          return null;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+
+        const words = ["snip", "snap", "record", "cut"];
+
+        recognition.onresult = async (event) => {
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              const transcript = event.results[i][0].transcript.trim().toLowerCase();
+              logToDiv('🗣️ Voice heard: ', transcript);
+
+              if (words.some(word => transcript.includes(word))) {
+                logToDiv("🎯 Voice keyword detected! Triggering 1m snippet...");
+
+                document.querySelector('.dur-btn[data-sec="60"]')?.click();
+              }
+            }
+          }
+        };
+
+        recognition.onerror = (event) => {
+          logToDiv(`⚠️ Speech err: \${event.error}`);
+        };
+
+        recognition.onend = () => {
+          if (recording && speechRecognitionObj) {
+            try { recognition.start(); } catch (e) { }
+          }
+        };
+
+        try {
+          recognition.start();
+          logToDiv("🎤 Voice listening for keywords ", words);
+        } catch (err) { }
+
+        return recognition;
       }
 
       function stopRecording() {
         log('stopRecording');
+        if (speechRecognitionObj) {
+          speechRecognitionObj.abort();
+          speechRecognitionObj = null;
+        }
         if (micStream) {
           micStream.getTracks().forEach(t => t.stop());
           micStream = null;
