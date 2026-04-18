@@ -1355,6 +1355,7 @@
           a.href = trimmedUrl;
           a.download = name;
           a.click();
+          URL.revokeObjectURL(trimmedUrl);
 
           progressCircle.style.display = 'none';
           textSpan.textContent = 'Save';
