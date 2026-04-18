@@ -1286,7 +1286,7 @@
         overlayCanvas.style.top = '0';
         overlayCanvas.style.zIndex = '1';
         overlayCanvas.style.pointerEvents = 'auto';
-        overlayCanvas.style.touchAction = 'none';
+        overlayCanvas.style.touchAction = 'pan-y';
         overlayCanvas.width = baseCanvas.width;
         overlayCanvas.height = baseCanvas.height;
         overlayCanvas.style.width = baseCanvas.style.width;
@@ -1659,9 +1659,19 @@
           dragType = null;
         }
 
+        card.pointercancel = () => {
+          if (isDragging) {
+            // logToDiv('pointercancel (resetting)');
+            // Only pause if we were scrubbing
+            if (dragType === SCRUB) audio.pause();
+
+            isDragging = false;
+            dragType = null;
+          }
+        }
         document.addEventListener('pointermove', card.pointermove);
         document.addEventListener('pointerup', card.pointerup);
-        //overlayCanvasEl.addEventListener('pointerleave', () => pointerUpped());
+        document.addEventListener('pointercancel', card.pointercancel);
 
         drawProgress();
       }
@@ -1826,8 +1836,9 @@
       }
 
       function removeSnippet(snippet) {
-        if (snippet.pointermove) document.removeEventListener('pointermove', snippet.pointermove);
-        if (snippet.pointerup) document.removeEventListener('pointerup', snippet.pointerup);
+        document.removeEventListener('pointermove', snippet.pointermove);
+        document.removeEventListener('pointerup', snippet.pointerup);
+        document.removeEventListener('pointercancel', snippet.pointercancel);
 
         // Revoke the Object URL to free up memory
         if (snippet.blobUrl) {
