@@ -1785,16 +1785,10 @@
       }
 
       // live waveform draw loop
-      let lastDraw = 0;
       function drawLiveWave() {
-        const now = performance.now();
-        if (now - lastDraw < 200) { requestAnimationFrame(drawLiveWave); return; }
-        lastDraw = now;
-
-        const canvas = liveWave;
         const ctx = liveCtx;
-        const wCss = canvas.clientWidth;
-        const hCss = canvas.clientHeight;
+        const wCss = liveWave.clientWidth;
+        const hCss = liveWave.clientHeight;
 
         ctx.clearRect(0, 0, wCss, hCss);
         ctx.lineWidth = 1.2;
@@ -1828,7 +1822,7 @@
           ctx.fillText('waiting for audio…', 12, 18);
         }
 
-        requestAnimationFrame(drawLiveWave);
+        setTimeout(() => requestAnimationFrame(drawLiveWave), 200);
       }
 
       function removeSnippet(snippet) {
