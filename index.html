@@ -1022,8 +1022,10 @@
         const numChannels = 1;
         const sampleRateLocal = sampleRate;
         const bufferLen = intSamples.length * 2; // 2 bytes per sample
-        const wavBuffer = new ArrayBuffer(44 + bufferLen);
-        const view = new DataView(wavBuffer);
+
+        // Only allocate the 44-byte header
+        const header = new ArrayBuffer(44);
+        const view = new DataView(header);
 
         function writeString(dataview, offset, str) {
           for (let i = 0; i < str.length; i++) dataview.setUint8(offset + i, str.charCodeAt(i));
@@ -1044,13 +1046,9 @@
         writeString(view, 36, 'data');
         view.setUint32(40, bufferLen, true);
 
-        // Write PCM data
-        let offset = 44;
-        for (let i = 0; i < intSamples.length; i++, offset += 2) {
-          view.setInt16(offset, intSamples[i], true);
-        }
-
-        return new Blob([view], { type: 'audio/wav' });
+        // Combine header and the existing sample buffer into a single Blob.
+        // This avoids copying several megabytes of data manually.
+        return new Blob([header, intSamples], { type: 'audio/wav' });
       }
 
 
@@ -1313,6 +1311,7 @@
         audio.src = url;
         playerWrap.appendChild(audio);
         card.audio = audio;
+        card.blobUrl = url; // Store for cleanup
 
         const dl = document.createElement('button');
         dl.className = 'download';
@@ -1834,6 +1833,11 @@
       function removeSnippet(snippet) {
         if (snippet.pointermove) document.removeEventListener('pointermove', snippet.pointermove);
         if (snippet.pointerup) document.removeEventListener('pointerup', snippet.pointerup);
+
+        // Revoke the Object URL to free up memory
+        if (snippet.blobUrl) {
+          URL.revokeObjectURL(snippet.blobUrl);
+        }
 
         snippet.remove();
         if (snippetsArea.children.length === 0) noSnippetMsg.style.display = 'block';
