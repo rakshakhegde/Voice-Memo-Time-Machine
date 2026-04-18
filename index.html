@@ -598,9 +598,7 @@
       }
       dprMonitor.addEventListener('change', handleDPRChange);
 
-      if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', updateAllCanvases);
-      }
+      window.visualViewport?.addEventListener('resize', updateAllCanvases);
 
       // Click to clear logs (UPDATED: now on clear button)
       clearLogBtn.addEventListener('click', (e) => {
