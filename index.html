@@ -561,8 +561,8 @@
       const noSnippetMsg = document.getElementById('no-snippet-msg');
 
       function updateDpr(canvas) {
-        const dpr = window.devicePixelRatio || 1;
-        // log('canvas id: ', canvas.id, dpr);
+        const dpr = Math.max(window.devicePixelRatio || 1, 2);
+        // log('new dpr: ', dpr);
         const ctx = canvas.getContext('2d');
         const displayWidth = canvas.clientWidth;
         const displayHeight = canvas.clientHeight;
