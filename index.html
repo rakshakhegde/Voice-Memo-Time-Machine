@@ -1746,14 +1746,14 @@
         ctx.fillRect(startX, 0, endX - startX, h);
 
         // Draw handles
-        ctx.fillStyle = 'rgba(110,231,183,0.8)';
+        ctx.fillStyle = 'rgba(15, 22, 32, 0.95)'; // Darker, richer background (matches --card)
         const handleWidth = 8;
         ctx.beginPath();
         ctx.roundRect(startX - handleWidth / 2, 0, handleWidth, h, 4);
         ctx.roundRect(endX - handleWidth / 2, 0, handleWidth, h, 4);
         ctx.fill();
         // Handle grip inside it
-        ctx.fillStyle = 'rgba(11, 15, 18, 0.95)';
+        ctx.fillStyle = 'rgba(110, 231, 183, 0.95)'; // Neon green accent for the grips
         ctx.beginPath();
         ctx.roundRect((startX - handleWidth / 2) + 2, h / 3, 1, h / 3, 4);
         ctx.roundRect((startX - handleWidth / 2) + 5, h / 3, 1, h / 3, 4);
