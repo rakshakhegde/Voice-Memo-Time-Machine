@@ -1545,6 +1545,7 @@
         const SCRUB = 'SCRUB';
         let dragType = null; // START, END, SCRUB or null
         let wasDragged = false; // Track if actual movement occurred
+        let scrubStartTime = 0;
 
         function drawProgress() {
           drawSnippetTimeUpdate(audio.currentTime || 0, card.snippetDuration, overlayCanvasEl, card.selectionStartSec, card.selectionEndSec);
@@ -1596,6 +1597,7 @@
             isDragging = true;
             dragType = SCRUB;
             wasDragged = false;
+            scrubStartTime = time;
             if (audio.duration) audio.currentTime = time;
 
             audio.play();
@@ -1652,7 +1654,11 @@
               audio.currentTime = card.selectionEndSec;
             }
           }
-          if (dragType === SCRUB && wasDragged) audio.pause();
+          if (dragType === SCRUB && wasDragged) {
+            if (Math.abs(audio.currentTime - scrubStartTime) > card.snippetDuration * 0.01) {
+              audio.pause();
+            }
+          }
           // Scrubbing naturally ends when user releases; audio position already set by pointermove
           isDragging = false;
           wasDragged = false;
