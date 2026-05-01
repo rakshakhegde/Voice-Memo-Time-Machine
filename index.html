@@ -1288,10 +1288,17 @@
           }
         };
 
-        // For keyboard accessibility (Tab + Enter)
+        // For keyboard accessibility
         removeBtn.onkeydown = (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
+          if (e.key === 'Enter') {
             removeSnippet(card);
+          } else if (e.key === ' ') {
+            e.preventDefault(); // Prevent default scroll / click
+            if (card.audio) {
+              if (card.audio.paused) card.audio.play();
+              else card.audio.pause();
+              card.audio.focus();
+            }
           }
         };
 
