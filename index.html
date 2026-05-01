@@ -1278,6 +1278,7 @@
         const removeBtn = document.createElement('button');
         removeBtn.textContent = '×';
         removeBtn.className = 'snippet-delete-btn';
+        removeBtn.setAttribute('aria-label', 'Delete snippet');
 
         removeBtn.onmousedown = (e) => {
           if (document.activeElement === removeBtn) {
